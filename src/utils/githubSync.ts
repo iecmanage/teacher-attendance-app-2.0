@@ -43,7 +43,16 @@ export async function fetchGistData(
       throw new Error('No JSON file found inside specified GitHub Gist.');
     }
 
-    const contentStr = files[targetFileKey].content;
+    let contentStr = files[targetFileKey].content;
+    if (!contentStr && files[targetFileKey].raw_url) {
+      const rawRes = await fetch(files[targetFileKey].raw_url);
+      contentStr = await rawRes.text();
+    }
+
+    if (!contentStr) {
+      throw new Error('JSON file content inside GitHub Gist is empty.');
+    }
+
     const parsedData: FullAttendanceExport = JSON.parse(contentStr);
     return parsedData;
   } catch (err) {
