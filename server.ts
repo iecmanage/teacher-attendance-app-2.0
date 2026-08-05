@@ -48,12 +48,13 @@ function loadStoreData() {
 let storeData = loadStoreData();
 
 function saveStoreData(newData: any) {
+  const ts = newData.lastUpdated || new Date().toISOString();
   storeData = {
     ...storeData,
     ...(newData.settings ? { settings: newData.settings } : {}),
     ...(newData.teachers ? { teachers: newData.teachers } : {}),
     ...(newData.records ? { records: newData.records } : {}),
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: ts,
   };
 
   try {
@@ -72,8 +73,8 @@ app.get('/api/sync', (req, res) => {
 });
 
 app.post('/api/sync', (req, res) => {
-  const { settings, teachers, records } = req.body;
-  saveStoreData({ settings, teachers, records });
+  const { settings, teachers, records, lastUpdated } = req.body;
+  saveStoreData({ settings, teachers, records, lastUpdated });
   res.json({ success: true, storeData });
 });
 
