@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import {
   INITIAL_ADMIN_SETTINGS,
   INITIAL_TEACHERS,
@@ -18,16 +19,29 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const STORE_PATH = path.join(process.cwd(), 'data_store.json');
 let storeData: any = null;
 
+// Supabase client (initialized lazily when needed)
+let supabase: ReturnType<typeof createClient> | null = null;
+function initSupabaseIfNeeded() {
+  if (supabase) return;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured');
+  }
+  supabase = createClient(url, key, { auth: { persistSession: false } });
+}
+
 // Helper: read stream to string
 async function streamToString(stream: any) {
   return await new Promise((resolve, reject) => {
     const chunks: any[] = [];
-    stream.on('data', (chunk: any) => chunks.push(chunk));
+    stream.on('data', (chunk: any) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
     stream.on('error', reject);
     stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
   });
 }
 
+// S3 helpers (optional)
 async function readFromS3() {
   const bucket = process.env.S3_BUCKET;
   const key = process.env.S3_KEY || 'data_store.json';
@@ -51,6 +65,7 @@ async function writeToS3(obj: any) {
   await client.send(cmd);
 }
 
+// Gist helpers (optional)
 async function readFromGist() {
   const gistId = process.env.GIST_ID;
   const token = process.env.GIST_TOKEN;
@@ -60,11 +75,9 @@ async function readFromGist() {
   });
   if (!res.ok) throw new Error(`Gist read failed: ${res.status}`);
   const data = await res.json();
-  // Expect a file named data_store.json or first file
   if (data.files && data.files['data_store.json'] && data.files['data_store.json'].content) {
     return JSON.parse(data.files['data_store.json'].content);
   }
-  // fallback: try first file
   const firstFileKey = Object.keys(data.files || {})[0];
   if (firstFileKey) {
     return JSON.parse(data.files[firstFileKey].content);
@@ -96,6 +109,29 @@ async function writeToGist(obj: any) {
   if (!res.ok) throw new Error(`Gist write failed: ${res.status}`);
 }
 
+// Supabase helpers (new)
+async function readFromSupabase() {
+  initSupabaseIfNeeded();
+  try {
+    const { data, error } = await supabase!.from('attendance_store').select('data').eq('id', 'main').limit(1).single();
+    if (error) throw error;
+    return data.data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function writeToSupabase(obj: any) {
+  initSupabaseIfNeeded();
+  const upsertObj = {
+    id: 'main',
+    data: obj,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase!.from('attendance_store').upsert(upsertObj, { returning: 'minimal' });
+  if (error) throw error;
+}
+
 async function loadStoreData() {
   // Try configured backends in order
   const backend = (process.env.STORAGE_BACKEND || 'filesystem').toLowerCase();
@@ -104,6 +140,8 @@ async function loadStoreData() {
       return await readFromS3();
     } else if (backend === 'gist') {
       return await readFromGist();
+    } else if (backend === 'supabase') {
+      return await readFromSupabase();
     } else {
       // filesystem
       if (fs.existsSync(STORE_PATH)) {
@@ -163,6 +201,8 @@ async function saveStoreData(newData: any) {
       await writeToS3(merged);
     } else if (backend === 'gist') {
       await writeToGist(merged);
+    } else if (backend === 'supabase') {
+      await writeToSupabase(merged);
     } else {
       fs.writeFileSync(STORE_PATH, JSON.stringify(merged, null, 2), 'utf-8');
     }
