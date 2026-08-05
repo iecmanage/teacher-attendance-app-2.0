@@ -41,6 +41,8 @@ interface AdminDashboardProps {
   onSaveRecord: (record: AttendanceRecord) => void;
   onSaveSettings: (newSettings: AdminSettingsType) => void;
   onResetData: () => void;
+  onManualSync?: () => void;
+  onPullGistData?: (gistId: string, token: string) => Promise<boolean>;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -54,6 +56,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveRecord,
   onSaveSettings,
   onResetData,
+  onManualSync,
+  onPullGistData,
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('OVERVIEW');
   const [generatedCode, setGeneratedCode] = useState<string>('IEC-7891');
@@ -466,6 +470,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           settings={settings}
           onSaveSettings={onSaveSettings}
           onResetData={onResetData}
+          onManualSync={onManualSync}
+          onPullGistData={onPullGistData}
         />
       )}
 
