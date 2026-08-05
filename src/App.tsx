@@ -29,8 +29,10 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const mode = urlParams.get('mode');
+    const wallQr = urlParams.get('wallQr');
+    const action = urlParams.get('action');
 
-    if (code) {
+    if (code || wallQr || action === 'checkin') {
       setViewMode('TEACHER_PORTAL');
     } else if (mode === 'admin') {
       setIsPinModalOpen(true);
