@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ViewMode, AdminSettings, Teacher, AttendanceRecord } from './types';
 import {
   getStoredSettings,
@@ -9,6 +9,7 @@ import {
   saveAttendance,
   resetAllDataToDefault,
 } from './utils/storage';
+import { fetchGistData, updateGistData, FullAttendanceExport } from './utils/githubSync';
 import { Header } from './components/Header';
 import { PinLockModal } from './components/PinLockModal';
 import { TeacherPortal } from './components/TeacherPortal';
@@ -24,6 +25,89 @@ export default function App() {
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
 
+  // Cloud Sync State
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
+
+  // Function to pull remote data from GitHub Gist
+  const pullFromGist = useCallback(
+    async (targetGistId?: string, targetToken?: string): Promise<boolean> => {
+      const gid = targetGistId || settings.githubSync?.gistId;
+      const tok = targetToken || settings.githubSync?.githubToken || '';
+
+      if (!gid) return false;
+
+      setIsSyncing(true);
+      try {
+        const remoteData = await fetchGistData(tok, gid);
+        if (remoteData) {
+          if (Array.isArray(remoteData.teachers) && remoteData.teachers.length > 0) {
+            setTeachers(remoteData.teachers);
+            saveTeachers(remoteData.teachers);
+          }
+          if (Array.isArray(remoteData.records)) {
+            setAttendanceRecords(remoteData.records);
+            saveAttendance(remoteData.records);
+          }
+          if (remoteData.settings) {
+            const mergedSettings = {
+              ...remoteData.settings,
+              githubSync: {
+                ...remoteData.settings.githubSync,
+                gistId: gid,
+                githubToken: tok || remoteData.settings.githubSync?.githubToken || '',
+                enabled: true,
+              },
+            };
+            setSettings(mergedSettings);
+            saveSettings(mergedSettings);
+          }
+          setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+          return true;
+        }
+      } catch (err) {
+        console.warn('GitHub Gist pull warning:', err);
+      } finally {
+        setIsSyncing(false);
+      }
+      return false;
+    },
+    [settings.githubSync]
+  );
+
+  // Function to push local data to GitHub Gist
+  const pushToGist = useCallback(
+    async (
+      currSettings: AdminSettings,
+      currTeachers: Teacher[],
+      currRecords: AttendanceRecord[]
+    ) => {
+      const gid = currSettings.githubSync?.gistId;
+      const tok = currSettings.githubSync?.githubToken;
+
+      if (!gid || !tok) return;
+
+      setIsSyncing(true);
+      try {
+        const exportData: FullAttendanceExport = {
+          version: '1.0',
+          lastUpdated: new Date().toISOString(),
+          instituteName: currSettings.instituteName,
+          settings: currSettings,
+          teachers: currTeachers,
+          records: currRecords,
+        };
+        await updateGistData(tok, gid, exportData);
+        setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      } catch (err) {
+        console.error('GitHub Gist push failed:', err);
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    []
+  );
+
   // Check URL params on initial load
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -31,18 +115,61 @@ export default function App() {
     const mode = urlParams.get('mode');
     const wallQr = urlParams.get('wallQr');
     const action = urlParams.get('action');
+    const gistFromUrl = urlParams.get('gistId');
 
     if (code || wallQr || action === 'checkin') {
       setViewMode('TEACHER_PORTAL');
     } else if (mode === 'admin') {
       setIsPinModalOpen(true);
     }
+
+    if (gistFromUrl) {
+      // Auto-adopt Gist ID from URL param
+      const updatedSettings: AdminSettings = {
+        ...settings,
+        githubSync: {
+          ...settings.githubSync,
+          gistId: gistFromUrl,
+          enabled: true,
+        },
+      };
+      setSettings(updatedSettings);
+      saveSettings(updatedSettings);
+      pullFromGist(gistFromUrl, updatedSettings.githubSync?.githubToken);
+    } else if (settings.githubSync?.gistId) {
+      pullFromGist();
+    }
   }, []);
+
+  // Periodic Auto-Sync & Visibility Focus Listener
+  useEffect(() => {
+    const gid = settings.githubSync?.gistId;
+    if (!gid) return;
+
+    // Background interval every 12 seconds
+    const interval = setInterval(() => {
+      pullFromGist();
+    }, 12000);
+
+    const handleWindowFocus = () => {
+      pullFromGist();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleWindowFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleWindowFocus);
+    };
+  }, [settings.githubSync?.gistId, settings.githubSync?.githubToken, pullFromGist]);
 
   // Handlers for Settings
   const handleSaveSettings = (newSettings: AdminSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
+    pushToGist(newSettings, teachers, attendanceRecords);
   };
 
   // Handlers for Teachers
@@ -50,6 +177,7 @@ export default function App() {
     const updated = [newTeacher, ...teachers];
     setTeachers(updated);
     saveTeachers(updated);
+    pushToGist(settings, updated, attendanceRecords);
   };
 
   const handleUpdateTeacher = (updatedTeacher: Teacher) => {
@@ -58,12 +186,14 @@ export default function App() {
     );
     setTeachers(updated);
     saveTeachers(updated);
+    pushToGist(settings, updated, attendanceRecords);
   };
 
   const handleDeleteTeacher = (id: string) => {
     const updated = teachers.filter((t) => t.id !== id);
     setTeachers(updated);
     saveTeachers(updated);
+    pushToGist(settings, updated, attendanceRecords);
   };
 
   // Handlers for Attendance Records
@@ -80,6 +210,7 @@ export default function App() {
 
     setAttendanceRecords(updated);
     saveAttendance(updated);
+    pushToGist(settings, teachers, updated);
   };
 
   // Handler for full Data Reset
@@ -88,6 +219,7 @@ export default function App() {
     setSettings(res.settings);
     setTeachers(res.teachers);
     setAttendanceRecords(res.records);
+    pushToGist(res.settings, res.teachers, res.records);
   };
 
   const handleUnlockAdminSuccess = () => {
@@ -117,6 +249,9 @@ export default function App() {
         isAdminUnlocked={isAdminUnlocked}
         onLockAdmin={handleLockAdmin}
         onOpenPinModal={() => setIsPinModalOpen(true)}
+        isSyncing={isSyncing}
+        lastSyncedTime={lastSyncedTime}
+        onManualSync={() => pullFromGist()}
       />
 
       {/* Main View Container */}
@@ -140,6 +275,8 @@ export default function App() {
             onSaveRecord={handleSaveAttendanceRecord}
             onSaveSettings={handleSaveSettings}
             onResetData={handleResetData}
+            onManualSync={() => pullFromGist()}
+            onPullGistData={(gid, tok) => pullFromGist(gid, tok)}
           />
         )}
       </main>
