@@ -139,32 +139,32 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           }
 
           .printable-document {
-            font-size: 7.5pt !important;
-            line-height: 1.1 !important;
+            font-size: 8.5pt !important;
+            line-height: 1.25 !important;
             color: #0f172a !important;
           }
 
           .printable-table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 7pt !important;
+            font-size: 8pt !important;
           }
 
           .printable-table th {
             background-color: #f1f5f9 !important;
             color: #0f172a !important;
-            font-size: 6.5pt !important;
-            padding: 1.5px 3px !important;
+            font-size: 7.5pt !important;
+            padding: 3.5px 6px !important;
             border: 1px solid #94a3b8 !important;
             text-transform: uppercase !important;
-            line-height: 1 !important;
+            line-height: 1.15 !important;
           }
 
           .printable-table td {
-            font-size: 7pt !important;
-            padding: 1px 2.5px !important;
+            font-size: 8.2pt !important;
+            padding: 3px 5px !important;
             border: 1px solid #cbd5e1 !important;
-            line-height: 1.05 !important;
+            line-height: 1.2 !important;
           }
 
           .page-break-avoid {
@@ -206,11 +206,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         </div>
 
         {/* PRINTABLE DOCUMENT BODY */}
-        <div className="printable-document space-y-2">
+        <div className="printable-document space-y-3">
           {/* Header with Logo */}
-          <div className="flex items-center justify-between border-b-2 border-emerald-900 pb-1.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-11 h-11 rounded-lg bg-emerald-950 p-1 flex items-center justify-center border border-amber-500 shrink-0 shadow-sm">
+          <div className="flex items-center justify-between border-b-2 border-emerald-900 pb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-emerald-950 p-1 flex items-center justify-center border border-amber-500 shrink-0 shadow-sm">
                 {settings.logoBase64 ? (
                   <img
                     src={settings.logoBase64}
@@ -218,39 +218,39 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <ShieldCheck className="w-6 h-6 text-amber-400" />
+                  <ShieldCheck className="w-7 h-7 text-amber-400" />
                 )}
               </div>
               <div>
                 <h1 className="text-base font-extrabold font-serif text-emerald-950 uppercase tracking-tight">
                   {settings.instituteName}
                 </h1>
-                <p className="text-[9px] font-semibold text-amber-700 tracking-wide uppercase">
+                <p className="text-[10px] font-semibold text-amber-700 tracking-wide uppercase">
                   Islamic Education Center — Online Academy Faculty Portal
                 </p>
-                <p className="text-[8.5px] text-slate-500">
+                <p className="text-[9px] text-slate-500">
                   {settings.geofence.instituteAddress}
                 </p>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="inline-block bg-emerald-950 text-amber-300 font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider">
+              <span className="inline-block bg-emerald-950 text-amber-300 font-bold px-2.5 py-0.5 rounded text-[9.5px] uppercase tracking-wider">
                 Monthly Report
               </span>
               <p className="text-xs font-extrabold text-slate-800 font-serif mt-0.5">
                 {monthName} {year}
               </p>
-              <p className="text-[8.5px] text-slate-400 font-mono">
+              <p className="text-[9px] text-slate-400 font-mono">
                 Printed: {new Date().toLocaleDateString()}
               </p>
             </div>
           </div>
 
           {/* Teacher Info Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs">
             <div>
-              <span className="text-slate-400 uppercase font-semibold text-[8.5px] block">
+              <span className="text-slate-400 uppercase font-semibold text-[9px] block">
                 Teacher Name
               </span>
               <span className="font-bold text-slate-900 font-serif text-xs">
@@ -258,19 +258,19 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-slate-400 uppercase font-semibold text-[8.5px] block">
+              <span className="text-slate-400 uppercase font-semibold text-[9px] block">
                 Employee ID
               </span>
               <span className="font-bold text-slate-900 font-mono text-xs">{teacher.employeeId}</span>
             </div>
             <div>
-              <span className="text-slate-400 uppercase font-semibold text-[8.5px] block">
+              <span className="text-slate-400 uppercase font-semibold text-[9px] block">
                 Department / Designation
               </span>
               <span className="font-medium text-slate-800 text-xs">{teacher.designation}</span>
             </div>
             <div>
-              <span className="text-slate-400 uppercase font-semibold text-[8.5px] block">
+              <span className="text-slate-400 uppercase font-semibold text-[9px] block">
                 Target Arrival Time
               </span>
               <span className="font-bold text-emerald-800 font-mono text-xs">
@@ -280,42 +280,42 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           {/* Month Summary Counters */}
-          <div className="grid grid-cols-5 gap-1 text-center text-xs">
-            <div className="p-1 bg-slate-100 rounded border border-slate-200">
-              <span className="text-slate-500 text-[8.5px] block font-semibold">Total Month Days</span>
+          <div className="grid grid-cols-5 gap-1.5 text-center text-xs">
+            <div className="p-1.5 bg-slate-100 rounded border border-slate-200">
+              <span className="text-slate-500 text-[9px] block font-semibold">Total Month Days</span>
               <span className="text-xs font-extrabold text-slate-800 font-mono">
                 {totalCalendarDays} Days
               </span>
             </div>
-            <div className="p-1 bg-emerald-50 rounded border border-emerald-200 text-emerald-900">
-              <span className="text-emerald-700 text-[8.5px] block font-semibold">On Time</span>
+            <div className="p-1.5 bg-emerald-50 rounded border border-emerald-200 text-emerald-900">
+              <span className="text-emerald-700 text-[9px] block font-semibold">On Time</span>
               <span className="text-xs font-extrabold text-emerald-700 font-mono">
                 {onTimeDays}
               </span>
             </div>
-            <div className="p-1 bg-amber-50 rounded border border-amber-200 text-amber-900">
-              <span className="text-amber-700 text-[8.5px] block font-semibold">Late Arrivals</span>
+            <div className="p-1.5 bg-amber-50 rounded border border-amber-200 text-amber-900">
+              <span className="text-amber-700 text-[9px] block font-semibold">Late Arrivals</span>
               <span className="text-xs font-extrabold text-amber-700 font-mono">
                 {lateDays}
               </span>
             </div>
-            <div className="p-1 bg-rose-50 rounded border border-rose-200 text-rose-900">
-              <span className="text-rose-700 text-[8.5px] block font-semibold">Absents</span>
+            <div className="p-1.5 bg-rose-50 rounded border border-rose-200 text-rose-900">
+              <span className="text-rose-700 text-[9px] block font-semibold">Absents</span>
               <span className="text-xs font-extrabold text-rose-700 font-mono">
                 {absentDays}
               </span>
             </div>
 
             {!hideGeofenceColumn ? (
-              <div className="p-1 bg-blue-50 rounded border border-blue-200 text-blue-900">
-                <span className="text-blue-700 text-[8.5px] block font-semibold">Avg GPS Dist</span>
+              <div className="p-1.5 bg-blue-50 rounded border border-blue-200 text-blue-900">
+                <span className="text-blue-700 text-[9px] block font-semibold">Avg GPS Dist</span>
                 <span className="text-xs font-extrabold text-blue-700 font-mono">
                   {formatDistance(avgDistance)}
                 </span>
               </div>
             ) : (
-              <div className="p-1 bg-indigo-50 rounded border border-indigo-200 text-indigo-900">
-                <span className="text-indigo-700 text-[8.5px] block font-semibold">Leaves / Offs</span>
+              <div className="p-1.5 bg-indigo-50 rounded border border-indigo-200 text-indigo-900">
+                <span className="text-indigo-700 text-[9px] block font-semibold">Leaves / Offs</span>
                 <span className="text-xs font-extrabold text-indigo-700 font-mono">
                   {offOrLeaveDays}
                 </span>
@@ -324,21 +324,21 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           {/* Entire Month Day-by-Day Table */}
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+          <div className="border border-slate-300 rounded-lg overflow-hidden">
             <table className="w-full text-left text-xs printable-table">
-              <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
                 <tr>
-                  <th className="py-0.5 px-1.5">Date</th>
-                  <th className="py-0.5 px-1.5">Day</th>
-                  <th className="py-0.5 px-1.5">Target</th>
-                  <th className="py-0.5 px-1.5">Check In</th>
-                  <th className="py-0.5 px-1.5">Check Out</th>
-                  <th className="py-0.5 px-1.5">Status</th>
-                  {!hideGeofenceColumn && <th className="py-0.5 px-1.5">Distance</th>}
-                  <th className="py-0.5 px-1.5">Notes / Remarks</th>
+                  <th className="py-1 px-2">Date</th>
+                  <th className="py-1 px-2">Day</th>
+                  <th className="py-1 px-2">Target</th>
+                  <th className="py-1 px-2">Check In</th>
+                  <th className="py-1 px-2">Check Out</th>
+                  <th className="py-1 px-2">Status</th>
+                  {!hideGeofenceColumn && <th className="py-1 px-2">Distance</th>}
+                  <th className="py-1 px-2">Notes / Remarks</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {monthDays.map((dateStr) => {
                   const rec = teacherRecordsMap.get(dateStr);
                   const dateObj = new Date(dateStr + 'T00:00:00');
@@ -352,14 +352,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       key={dateStr}
                       className="hover:bg-slate-50"
                     >
-                      <td className="py-0.5 px-1.5 font-mono font-medium">{dateStr}</td>
-                      <td className="py-0.5 px-1.5 font-semibold text-slate-600">{dayName}</td>
-                      <td className="py-0.5 px-1.5 font-mono text-slate-500">
+                      <td className="py-1 px-2 font-mono font-semibold text-slate-900">{dateStr}</td>
+                      <td className="py-1 px-2 font-bold text-slate-700">{dayName}</td>
+                      <td className="py-1 px-2 font-mono text-slate-600">
                         {formatTime12Hour(
                           rec?.targetArrivalTime || teacher.targetArrivalTime || settings.defaultTargetArrivalTime
                         )}
                       </td>
-                      <td className="py-0.5 px-1.5 font-mono">
+                      <td className="py-1 px-2 font-mono font-medium text-slate-800">
                         {rec?.checkInTime
                           ? formatTime12Hour(rec.checkInTime)
                           : status === 'EXCUSED_LEAVE'
@@ -368,21 +368,21 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                           ? 'Off Day'
                           : '--:--'}
                       </td>
-                      <td className="py-0.5 px-1.5 font-mono">
+                      <td className="py-1 px-2 font-mono font-medium text-slate-800">
                         {rec?.checkOutTime ? formatTime12Hour(rec.checkOutTime) : '--:--'}
                       </td>
-                      <td className="py-0.5 px-1.5">
+                      <td className="py-1 px-2">
                         <span
-                          className={`px-1 py-0.25 rounded text-[8px] font-bold ${
+                          className={`px-1.5 py-0.5 rounded text-[8.5px] font-extrabold tracking-wide uppercase ${
                             status === 'ON_TIME'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                               : status === 'LATE'
-                              ? 'bg-amber-100 text-amber-800'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
                               : status === 'ABSENT'
-                              ? 'bg-rose-100 text-rose-800'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
                               : status === 'EXCUSED_LEAVE'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-slate-100 text-slate-700'
+                              ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                              : 'bg-slate-100 text-slate-700 border border-slate-300'
                           }`}
                         >
                           {badge.label}
@@ -390,14 +390,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       </td>
 
                       {!hideGeofenceColumn && (
-                        <td className="py-0.5 px-1.5 font-mono text-slate-600">
+                        <td className="py-1 px-2 font-mono text-slate-700">
                           {rec?.checkInDistanceMeters !== undefined
                             ? `${rec.checkInDistanceMeters}m`
                             : '-'}
                         </td>
                       )}
 
-                      <td className="py-0.5 px-1.5 text-slate-500 truncate max-w-[140px]">
+                      <td className="py-1 px-2 text-slate-600 truncate max-w-[150px]">
                         {rec?.notes || '-'}
                       </td>
                     </tr>
@@ -408,18 +408,18 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           {/* Printable Official Signature Block */}
-          <div className="pt-2 grid grid-cols-2 gap-8 text-center text-xs text-slate-600 page-break-avoid">
+          <div className="pt-3 grid grid-cols-2 gap-12 text-center text-xs text-slate-700 page-break-avoid">
             <div>
-              <div className="border-t border-slate-400 pt-1 font-bold font-serif text-slate-900">
+              <div className="border-t-2 border-slate-400 pt-1.5 font-bold font-serif text-slate-900">
                 Teacher Signature
               </div>
-              <p className="text-[8.5px] text-slate-400 mt-0.5">{teacher.name}</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">{teacher.name}</p>
             </div>
             <div>
-              <div className="border-t border-slate-400 pt-1 font-bold font-serif text-slate-900">
+              <div className="border-t-2 border-slate-400 pt-1.5 font-bold font-serif text-slate-900">
                 Principal / Admin Verification Signature
               </div>
-              <p className="text-[8.5px] text-slate-400 mt-0.5">
+              <p className="text-[9px] text-slate-500 mt-0.5">
                 {settings.instituteName} Administration
               </p>
             </div>
