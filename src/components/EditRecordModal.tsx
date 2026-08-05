@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { AttendanceRecord, AttendanceStatus, Teacher } from '../types';
-import { formatTime12Hour } from '../utils/timeUtils';
-import { X, Save, Clock, MapPin, Calendar, FileText } from 'lucide-react';
+import { AttendanceRecord, AttendanceStatus, Teacher, AdminSettings } from '../types';
+import { formatTime12Hour, evaluateCheckInTime } from '../utils/timeUtils';
+import { X, Save, Clock, MapPin, Calendar, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+
+export type StatusCategoryOption = 'PRESENT' | 'ABSENT' | 'HALF_DAY' | 'EXCUSED_LEAVE' | 'OFF_DAY';
 
 interface EditRecordModalProps {
   isOpen: boolean;
@@ -10,6 +12,7 @@ interface EditRecordModalProps {
   teacher: Teacher | null;
   dateStr: string;
   onSave: (updatedRecord: AttendanceRecord) => void;
+  settings?: AdminSettings;
 }
 
 export const EditRecordModal: React.FC<EditRecordModalProps> = ({
@@ -19,51 +22,93 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
   teacher,
   dateStr,
   onSave,
+  settings,
 }) => {
+  const [statusCategory, setStatusCategory] = useState<StatusCategoryOption>('PRESENT');
   const [checkInTime, setCheckInTime] = useState<string>('08:00');
   const [checkOutTime, setCheckOutTime] = useState<string>('15:30');
-  const [status, setStatus] = useState<AttendanceStatus>('ON_TIME');
   const [distanceMeters, setDistanceMeters] = useState<string>('20');
   const [notes, setNotes] = useState<string>('');
 
+  const targetTime =
+    record?.targetArrivalTime ||
+    teacher?.targetArrivalTime ||
+    settings?.defaultTargetArrivalTime ||
+    '08:00';
+
   useEffect(() => {
+    const defaultTime = teacher?.targetArrivalTime || settings?.defaultTargetArrivalTime || '08:00';
+
     if (record) {
-      setCheckInTime(record.checkInTime || '08:00');
+      setCheckInTime(record.checkInTime || defaultTime);
       setCheckOutTime(record.checkOutTime || '15:30');
-      setStatus(record.status || 'ON_TIME');
+      if (record.status === 'ABSENT') {
+        setStatusCategory('ABSENT');
+      } else if (record.status === 'HALF_DAY') {
+        setStatusCategory('HALF_DAY');
+      } else if (record.status === 'EXCUSED_LEAVE') {
+        setStatusCategory('EXCUSED_LEAVE');
+      } else if (record.status === 'OFF_DAY') {
+        setStatusCategory('OFF_DAY');
+      } else {
+        setStatusCategory('PRESENT');
+      }
       setDistanceMeters(
         record.checkInDistanceMeters !== undefined ? String(record.checkInDistanceMeters) : '20'
       );
       setNotes(record.notes || '');
     } else {
-      setCheckInTime('08:00');
+      setCheckInTime(defaultTime);
       setCheckOutTime('15:30');
-      setStatus('ON_TIME');
+      setStatusCategory('PRESENT');
       setDistanceMeters('20');
       setNotes('');
     }
-  }, [record, dateStr]);
+  }, [record, dateStr, teacher, settings]);
 
   if (!isOpen || !teacher) return null;
+
+  // Live calculation of On Time vs Late Arrival based on check-in time vs target arrival time
+  const evaluation = evaluateCheckInTime(
+    checkInTime,
+    targetTime,
+    settings?.gracePeriodMinutes || 0,
+    settings?.shiftType === 'NIGHT_SHIFT'
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const recordId = record ? record.id : `att-${teacher.id}-${dateStr}`;
 
+    let computedStatus: AttendanceStatus;
+    let computedIsOnTime = false;
+    let computedLateMinutes = 0;
+
+    if (statusCategory === 'PRESENT') {
+      computedStatus = evaluation.isOnTime ? 'ON_TIME' : 'LATE';
+      computedIsOnTime = evaluation.isOnTime;
+      computedLateMinutes = evaluation.lateMinutes;
+    } else {
+      computedStatus = statusCategory as AttendanceStatus;
+      computedIsOnTime = false;
+      computedLateMinutes = 0;
+    }
+
     const updated: AttendanceRecord = {
       id: recordId,
       teacherId: teacher.id,
       date: dateStr,
-      checkInTime: status === 'ABSENT' || status === 'OFF_DAY' ? undefined : checkInTime,
-      checkOutTime: status === 'ABSENT' || status === 'OFF_DAY' ? undefined : checkOutTime,
-      status: status,
+      checkInTime: statusCategory === 'ABSENT' || statusCategory === 'OFF_DAY' ? undefined : checkInTime,
+      checkOutTime: statusCategory === 'ABSENT' || statusCategory === 'OFF_DAY' ? undefined : checkOutTime,
+      status: computedStatus,
       checkInDistanceMeters:
-        status === 'ABSENT' || status === 'OFF_DAY'
+        statusCategory === 'ABSENT' || statusCategory === 'OFF_DAY'
           ? undefined
           : parseFloat(distanceMeters) || 0,
-      isOnTime: status === 'ON_TIME',
-      targetArrivalTime: teacher.targetArrivalTime,
+      isOnTime: computedIsOnTime,
+      lateMinutes: computedLateMinutes,
+      targetArrivalTime: targetTime,
       notes: notes,
       editedByAdmin: true,
       lastUpdated: new Date().toISOString(),
@@ -97,28 +142,65 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Status Selection */}
+          {/* Target Arrival Info Banner */}
+          <div className="bg-slate-800/90 border border-slate-700/80 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-300 font-medium">Employee Target Arrival Time:</span>
+              <span className="font-mono font-bold text-amber-300 bg-amber-950 px-2.5 py-0.5 rounded border border-amber-800/80">
+                {formatTime12Hour(targetTime)}
+              </span>
+            </div>
+
+            {statusCategory === 'PRESENT' && (
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-700/60">
+                <span className="text-slate-400">Calculated Attendance Status:</span>
+                <span
+                  className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm ${
+                    evaluation.isOnTime
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/80'
+                      : 'bg-amber-950 text-amber-300 border border-amber-700/80'
+                  }`}
+                >
+                  {evaluation.isOnTime ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>ON TIME</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>LATE ARRIVAL ({evaluation.lateMinutes} mins late)</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Attendance Type Category */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Attendance Status
+              Attendance Record Type
             </label>
             <select
               id="edit-record-status-select"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
+              value={statusCategory}
+              onChange={(e) => setStatusCategory(e.target.value as StatusCategoryOption)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm font-medium focus:ring-2 focus:ring-emerald-500"
             >
-              <option value="ON_TIME">On Time (Present)</option>
-              <option value="LATE">Late Arrival</option>
+              <option value="PRESENT">Checked In / Present (Auto On-Time or Late)</option>
               <option value="ABSENT">Absent</option>
               <option value="HALF_DAY">Half Day</option>
               <option value="EXCUSED_LEAVE">Excused Leave</option>
               <option value="OFF_DAY">Off Day / Holiday</option>
             </select>
+            <p className="text-[11px] text-slate-400 mt-1">
+              * Note: On-Time vs. Late status is automatically calculated from the Check-In time relative to the employee's target arrival time ({formatTime12Hour(targetTime)}).
+            </p>
           </div>
 
           {/* Time fields if present */}
-          {status !== 'ABSENT' && status !== 'OFF_DAY' && (
+          {statusCategory !== 'ABSENT' && statusCategory !== 'OFF_DAY' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
@@ -161,7 +243,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
           )}
 
           {/* Distance from geofence field */}
-          {status !== 'ABSENT' && status !== 'OFF_DAY' && (
+          {statusCategory !== 'ABSENT' && statusCategory !== 'OFF_DAY' && (
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-blue-400" />
@@ -172,7 +254,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 type="number"
                 value={distanceMeters}
                 onChange={(e) => setDistanceMeters(e.target.value)}
-                placeholder="e.g. 25"
+                placeholder="e.g. 20"
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-sm focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -189,7 +271,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Retroactively updated by Admin, Medical excuse attached..."
+              placeholder="e.g. Adjusted check-in time, Medical excuse attached..."
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -217,3 +299,4 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
     </div>
   );
 };
+
