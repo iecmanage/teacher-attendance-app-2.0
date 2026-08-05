@@ -92,8 +92,9 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
       : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Top Header & Filters */}
+    <>
+      <div className="space-y-6 print:hidden">
+        {/* Top Header & Filters */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -409,6 +410,8 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
         />
       )}
 
+      </div>
+
       {/* Print Modal */}
       {printTeacher && (
         <PrintReportModal
@@ -422,6 +425,6 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
           settings={settings}
         />
       )}
-    </div>
+    </>
   );
 };

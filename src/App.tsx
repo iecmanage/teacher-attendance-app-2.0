@@ -143,7 +143,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+      <footer className="bg-slate-900 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500 print:hidden">
         <p>
           © {new Date().getFullYear()} {settings.instituteName} — Faculty Geofenced Attendance System
         </p>

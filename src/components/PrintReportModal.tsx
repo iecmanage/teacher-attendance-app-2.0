@@ -90,8 +90,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             margin: 3mm 3mm 3mm 3mm;
           }
 
-          /* Ensure html and body are pure white with no margins */
-          html, body {
+          /* Ensure html, body, and app root containers are pure white with zero margins */
+          html, body, #root, main {
             background: #ffffff !important;
             background-color: #ffffff !important;
             color: #0f172a !important;
@@ -104,37 +104,26 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             print-color-adjust: exact !important;
           }
 
-          /* Hide all default page content during print */
-          body > * {
-            visibility: hidden !important;
+          /* Hide all default UI elements marked with print:hidden */
+          .print\\:hidden,
+          .print\\:hidden * {
+            display: none !important;
           }
 
-          /* Explicitly show only the printable modal overlay and its children */
-          #printable-modal-overlay,
-          #printable-modal-overlay * {
-            visibility: visible !important;
-          }
-
-          /* Position printable container at top-left of A4 page with zero modal backdrop */
+          /* Position printable modal container statically with white background */
           #printable-modal-overlay {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+            position: static !important;
+            inset: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
             background: #ffffff !important;
+            background-color: #ffffff !important;
             color: #0f172a !important;
             display: block !important;
-            z-index: 999999 !important;
-          }
-
-          .print\\:hidden,
-          .print\\:hidden * {
-            display: none !important;
-            visibility: hidden !important;
+            width: 100% !important;
+            backdrop-filter: none !important;
           }
 
           .printable-report-container {

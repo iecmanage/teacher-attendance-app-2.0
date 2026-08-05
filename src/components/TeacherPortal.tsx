@@ -345,8 +345,9 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     distanceMeters !== null && distanceMeters <= settings.geofence.radiusMeters;
 
   return (
-    <div className="space-y-6">
-      {/* Top Welcome Banner */}
+    <>
+      <div className="space-y-6 print:hidden">
+        {/* Top Welcome Banner */}
       <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl p-6 shadow-xl border border-emerald-800/40 relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
@@ -873,6 +874,8 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
         </div>
       )}
 
+      </div>
+
       {/* Printable Monthly Attendance Report Modal (Teacher Self-Service View) */}
       {showMyReportModal && selectedTeacher && (
         <PrintReportModal
@@ -887,6 +890,6 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
           hideGeofenceColumn={true}
         />
       )}
-    </div>
+    </>
   );
 };

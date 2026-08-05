@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Institute Branding */}
