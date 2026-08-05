@@ -17,6 +17,9 @@ interface HeaderProps {
   isAdminUnlocked: boolean;
   onLockAdmin: () => void;
   onOpenPinModal: () => void;
+  isSyncing?: boolean;
+  lastSyncedTime?: string | null;
+  onManualSync?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
   isAdminUnlocked,
   onLockAdmin,
   onOpenPinModal,
+  isSyncing = false,
+  lastSyncedTime = null,
+  onManualSync,
 }) => {
   const [currentTime, setCurrentTime] = React.useState<string>('');
 
@@ -75,6 +81,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Time & Portal Switcher Controls */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+            {/* Cloud Sync Status Badge */}
+            {settings.githubSync?.gistId ? (
+              <button
+                id="header-cloud-sync-btn"
+                onClick={onManualSync}
+                disabled={isSyncing}
+                className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/40 px-2.5 py-1.5 rounded-lg transition-all font-mono"
+                title="Click to sync now with GitHub Gist Central Store"
+              >
+                <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                <span>{isSyncing ? 'Syncing...' : lastSyncedTime ? `Cloud Sync: ${lastSyncedTime}` : 'Cloud Sync Active'}</span>
+              </button>
+            ) : null}
+
             {/* Clock */}
             <div className="hidden lg:flex items-center gap-1.5 text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-mono">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
