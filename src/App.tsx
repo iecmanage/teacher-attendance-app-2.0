@@ -25,9 +25,58 @@ export default function App() {
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
 
-  // Cloud Sync State
+  // Cloud & Server Sync State
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
+
+  // Central Server API Sync (Syncs across all mobile phones and browsers)
+  const fetchServerSync = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sync?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.teachers && data.records && data.settings) {
+          setTeachers(data.teachers);
+          saveTeachers(data.teachers);
+          setAttendanceRecords(data.records);
+          saveAttendance(data.records);
+          setSettings(data.settings);
+          saveSettings(data.settings);
+          setLastSyncedTime(
+            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('Server sync fetch error:', e);
+    }
+  }, []);
+
+  const pushServerSync = useCallback(
+    async (
+      currSettings: AdminSettings,
+      currTeachers: Teacher[],
+      currRecords: AttendanceRecord[]
+    ) => {
+      try {
+        await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            settings: currSettings,
+            teachers: currTeachers,
+            records: currRecords,
+          }),
+        });
+        setLastSyncedTime(
+          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        );
+      } catch (e) {
+        console.warn('Server sync push error:', e);
+      }
+    },
+    []
+  );
 
   // Function to pull remote data from GitHub Gist
   const pullFromGist = useCallback(
@@ -35,7 +84,10 @@ export default function App() {
       const gid = targetGistId || settings.githubSync?.gistId;
       const tok = targetToken || settings.githubSync?.githubToken || '';
 
-      if (!gid) return false;
+      if (!gid) {
+        await fetchServerSync();
+        return true;
+      }
 
       setIsSyncing(true);
       try {
@@ -62,6 +114,7 @@ export default function App() {
             setSettings(mergedSettings);
             saveSettings(mergedSettings);
           }
+          pushServerSync(remoteData.settings || settings, remoteData.teachers || teachers, remoteData.records || attendanceRecords);
           setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
           return true;
         }
@@ -72,16 +125,18 @@ export default function App() {
       }
       return false;
     },
-    [settings.githubSync]
+    [settings, teachers, attendanceRecords, fetchServerSync, pushServerSync]
   );
 
-  // Function to push local data to GitHub Gist
+  // Function to push local data to GitHub Gist & Server
   const pushToGist = useCallback(
     async (
       currSettings: AdminSettings,
       currTeachers: Teacher[],
       currRecords: AttendanceRecord[]
     ) => {
+      await pushServerSync(currSettings, currTeachers, currRecords);
+
       const gid = currSettings.githubSync?.gistId;
       const tok = currSettings.githubSync?.githubToken;
 
@@ -105,11 +160,13 @@ export default function App() {
         setIsSyncing(false);
       }
     },
-    []
+    [pushServerSync]
   );
 
-  // Check URL params on initial load
+  // Initial load sync & URL params check
   useEffect(() => {
+    fetchServerSync();
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const mode = urlParams.get('mode');
@@ -124,7 +181,6 @@ export default function App() {
     }
 
     if (gistFromUrl) {
-      // Auto-adopt Gist ID from URL param
       const updatedSettings: AdminSettings = {
         ...settings,
         githubSync: {
@@ -141,18 +197,22 @@ export default function App() {
     }
   }, []);
 
-  // Periodic Auto-Sync & Visibility Focus Listener
+  // Periodic Auto-Sync every 3s across all connected phones and PCs
   useEffect(() => {
-    const gid = settings.githubSync?.gistId;
-    if (!gid) return;
-
-    // Background interval every 12 seconds
     const interval = setInterval(() => {
-      pullFromGist();
-    }, 12000);
+      if (settings.githubSync?.gistId) {
+        pullFromGist();
+      } else {
+        fetchServerSync();
+      }
+    }, 3000);
 
     const handleWindowFocus = () => {
-      pullFromGist();
+      if (settings.githubSync?.gistId) {
+        pullFromGist();
+      } else {
+        fetchServerSync();
+      }
     };
 
     window.addEventListener('focus', handleWindowFocus);
@@ -163,7 +223,7 @@ export default function App() {
       window.removeEventListener('focus', handleWindowFocus);
       document.removeEventListener('visibilitychange', handleWindowFocus);
     };
-  }, [settings.githubSync?.gistId, settings.githubSync?.githubToken, pullFromGist]);
+  }, [settings.githubSync?.gistId, pullFromGist, fetchServerSync]);
 
   // Handlers for Settings
   const handleSaveSettings = (newSettings: AdminSettings) => {
