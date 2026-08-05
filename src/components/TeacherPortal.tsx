@@ -12,9 +12,12 @@ import {
   formatTime12Hour,
   evaluateCheckInTime,
   getStatusBadgeInfo,
+  getMonthDaysList,
+  getMonthName,
 } from '../utils/timeUtils';
 import { QRScannerModal } from './QRScannerModal';
 import { QRCodeDisplay } from './QRCodeDisplay';
+import { PrintReportModal } from './PrintReportModal';
 import {
   MapPin,
   CheckCircle2,
@@ -32,6 +35,7 @@ import {
   Moon,
   Sun,
   Share2,
+  FileText,
 } from 'lucide-react';
 
 interface TeacherPortalProps {
@@ -56,6 +60,9 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   // QR Scanner Modal State
   const [isQRModalOpen, setIsQRModalOpen] = useState<boolean>(false);
   const [showPersonalQRBadge, setShowPersonalQRBadge] = useState<boolean>(false);
+  const [showMyReportModal, setShowMyReportModal] = useState<boolean>(false);
+  const [myReportMonth, setMyReportMonth] = useState<number>(new Date().getMonth());
+  const [myReportYear, setMyReportYear] = useState<number>(new Date().getFullYear());
 
   // GPS / Geofence State
   const [userLat, setUserLat] = useState<number | null>(null);
@@ -386,14 +393,25 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
               </button>
 
               {selectedTeacher && (
-                <button
-                  id="my-qr-badge-btn"
-                  onClick={() => setShowPersonalQRBadge(true)}
-                  className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
-                >
-                  <QrCode className="w-4 h-4 text-amber-400" />
-                  <span>My QR Badge</span>
-                </button>
+                <>
+                  <button
+                    id="my-qr-badge-btn"
+                    onClick={() => setShowPersonalQRBadge(true)}
+                    className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
+                  >
+                    <QrCode className="w-4 h-4 text-amber-400" />
+                    <span>My QR Badge</span>
+                  </button>
+
+                  <button
+                    id="my-monthly-report-btn"
+                    onClick={() => setShowMyReportModal(true)}
+                    className="bg-emerald-900/90 hover:bg-emerald-800 text-emerald-200 border border-emerald-500/40 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <FileText className="w-4 h-4 text-emerald-400" />
+                    <span>My Monthly Report</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -853,6 +871,21 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
             </p>
           </div>
         </div>
+      )}
+
+      {/* Printable Monthly Attendance Report Modal (Teacher Self-Service View) */}
+      {showMyReportModal && selectedTeacher && (
+        <PrintReportModal
+          isOpen={showMyReportModal}
+          onClose={() => setShowMyReportModal(false)}
+          teacher={selectedTeacher}
+          monthName={getMonthName(myReportMonth)}
+          year={myReportYear}
+          records={attendanceRecords}
+          monthDays={getMonthDaysList(myReportYear, myReportMonth)}
+          settings={settings}
+          hideGeofenceColumn={true}
+        />
       )}
     </div>
   );
