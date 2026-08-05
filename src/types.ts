@@ -69,6 +69,7 @@ export interface AdminSettings {
   nightShiftEndTime: string; // e.g. "06:00" (6:00 AM next morning)
   overnightCutoffHour: number; // e.g. 7 (00:00 to 07:00 AM belongs to previous date)
   githubSync: GitHubSyncConfig;
+  lastUpdated?: string;
 }
 
 export type ViewMode = 'TEACHER_PORTAL' | 'ADMIN_DASHBOARD';
