@@ -139,32 +139,32 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           }
 
           .printable-document {
-            font-size: 8.5pt !important;
-            line-height: 1.25 !important;
+            font-size: 9pt !important;
+            line-height: 1.3 !important;
             color: #0f172a !important;
           }
 
           .printable-table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 8pt !important;
+            font-size: 8.5pt !important;
           }
 
           .printable-table th {
             background-color: #f1f5f9 !important;
             color: #0f172a !important;
-            font-size: 7.5pt !important;
-            padding: 3.5px 6px !important;
+            font-size: 8pt !important;
+            padding: 5px 6px !important;
             border: 1px solid #94a3b8 !important;
             text-transform: uppercase !important;
-            line-height: 1.15 !important;
+            line-height: 1.2 !important;
           }
 
           .printable-table td {
-            font-size: 8.2pt !important;
-            padding: 3px 5px !important;
+            font-size: 8.5pt !important;
+            padding: 4px 6px !important;
             border: 1px solid #cbd5e1 !important;
-            line-height: 1.2 !important;
+            line-height: 1.25 !important;
           }
 
           .page-break-avoid {
@@ -408,7 +408,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           {/* Printable Official Signature Block */}
-          <div className="pt-3 grid grid-cols-2 gap-12 text-center text-xs text-slate-700 page-break-avoid">
+          <div className="pt-6 sm:pt-8 grid grid-cols-2 gap-12 text-center text-xs text-slate-700 page-break-avoid">
             <div>
               <div className="border-t-2 border-slate-400 pt-1.5 font-bold font-serif text-slate-900">
                 Teacher Signature
@@ -417,7 +417,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </div>
             <div>
               <div className="border-t-2 border-slate-400 pt-1.5 font-bold font-serif text-slate-900">
-                Principal / Admin Verification Signature
+                Director / Admin Signature
               </div>
               <p className="text-[9px] text-slate-500 mt-0.5">
                 {settings.instituteName} Administration
