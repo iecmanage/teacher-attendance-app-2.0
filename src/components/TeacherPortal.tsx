@@ -75,10 +75,16 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   // Success message modal
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
-  // Check URL params on initial mount (e.g. ?code=IEC-7891)
+  // Check URL params on initial mount (e.g. ?code=IEC-7891 or ?wallQr=IEC-WALL-CHECKIN)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('code');
+    const wallQrFromUrl = urlParams.get('wallQr');
+
+    if (wallQrFromUrl) {
+      setSuccessBanner('📍 Wall QR Code Scanned! Please enter your PIN below to mark attendance.');
+      setTimeout(() => setSuccessBanner(null), 7000);
+    }
 
     if (codeFromUrl) {
       const match = teachers.find(
@@ -104,7 +110,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     setIsQRModalOpen(false);
     const code = scannedText.trim().toUpperCase();
 
-    // Check if scanned QR matches teacher access code or employee ID
+    // Check if scanned QR matches teacher access code, employee ID or Wall QR
     const matchedTeacher = teachers.find(
       (t) =>
         t.accessCode.toUpperCase() === code ||
@@ -116,20 +122,35 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
       setSelectedTeacher(matchedTeacher);
       setTokenVerified(true);
       setAccessCodeInput(matchedTeacher.accessCode);
-      setSuccessBanner(`QR Recognized! Verified ${matchedTeacher.name}. Tapping Check-In below.`);
+      setSuccessBanner(`QR Code Recognized! Verified ${matchedTeacher.name}. Enter PIN or click Check-In.`);
       setTimeout(() => setSuccessBanner(null), 5000);
-    } else if (code.includes('IEC') || code.includes('CAMPUS') || code.includes('ATTENDANCE')) {
-      // Campus QR scanned! Perform check-in for current teacher
+    } else if (
+      code.includes('IEC') ||
+      code.includes('CAMPUS') ||
+      code.includes('WALL') ||
+      code.includes('CHECKIN')
+    ) {
+      // Wall / Campus QR scanned! Prompt check-in
       if (selectedTeacher) {
-        setSuccessBanner(`Campus QR Scanned! Checking in ${selectedTeacher.name}...`);
-        setTimeout(() => {
-          handleCheckIn();
-        }, 600);
+        const currentDist = distanceMeters ?? 20;
+        const isWithin = currentDist <= settings.geofence.radiusMeters;
+        if (settings.geofence.strictEnforcement && !isWithin) {
+          alert(
+            `⚠️ Campus Parameter Alert: You scanned the Wall QR code, but you are ${formatDistance(
+              currentDist
+            )} away from campus. You must be inside the ${settings.geofence.radiusMeters}m perimeter to check in.`
+          );
+        } else {
+          setSuccessBanner(`Wall QR Scanned! Checking in ${selectedTeacher.name}...`);
+          setTimeout(() => {
+            handleCheckIn();
+          }, 500);
+        }
       } else {
-        alert('Campus QR scanned! Please select your Teacher profile first.');
+        alert('Wall QR code scanned! Please select your Teacher profile or enter your PIN below.');
       }
     } else {
-      alert(`Scanned QR Code (${scannedText}) does not match any registered Teacher or Campus QR.`);
+      alert(`Scanned QR Code (${scannedText}) does not match any registered Teacher or Wall QR.`);
     }
   };
 
@@ -223,8 +244,31 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
       setSelectedTeacher(matchedTeacher);
       setTokenVerified(true);
       setAuthError('');
+
+      // Geofence perimeter check upon PIN entry
+      const currentDist = distanceMeters ?? 20;
+      const isWithin = currentDist <= settings.geofence.radiusMeters;
+
+      if (settings.geofence.strictEnforcement && !isWithin) {
+        setAuthError(
+          `⚠️ Campus Perimeter Enforced: Verified PIN for ${
+            matchedTeacher.name
+          }, but you are ${formatDistance(
+            currentDist
+          )} away. You must be inside the ${
+            settings.geofence.radiusMeters
+          }m parameter of ${settings.instituteName} to check in.`
+        );
+      } else {
+        setSuccessBanner(
+          `🔑 PIN Verified for ${matchedTeacher.name}! Logged in successfully inside campus parameter (${formatDistance(
+            currentDist
+          )} away).`
+        );
+        setTimeout(() => setSuccessBanner(null), 6000);
+      }
     } else {
-      setAuthError('Invalid Access Code or Employee ID. Please verify with Admin.');
+      setAuthError('Invalid Access Code or Employee PIN. Please verify with Admin.');
     }
   };
 
