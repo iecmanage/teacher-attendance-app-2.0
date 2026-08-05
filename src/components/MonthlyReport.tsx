@@ -407,6 +407,7 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
           teacher={editingRecord.teacher}
           dateStr={editingRecord.dateStr}
           onSave={onSaveRecord}
+          settings={settings}
         />
       )}
 
