@@ -79,16 +79,42 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto print:block">
-      {/* Print CSS Styles for Perfect Single-Page A4 Sizing */}
+      {/* Print CSS Styles for Perfect Single-Page A4 Sizing and Complete UI Isolation */}
       <style>{`
         @media print {
+          /* Hide all page content by default during print */
+          body * {
+            visibility: hidden !important;
+          }
+
+          /* Explicitly show only the printable report container and its children */
+          .printable-report-container,
+          .printable-report-container * {
+            visibility: visible !important;
+          }
+
+          /* Pin the printable container to the top-left of the A4 page */
+          .printable-report-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-radius: 0 !important;
+          }
+
           @page {
             size: A4 portrait;
             margin: 4mm 4mm 4mm 4mm;
           }
-          html, body, #root {
+
+          html, body {
             background: #ffffff !important;
-            background-color: #ffffff !important;
             color: #0f172a !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -98,40 +124,24 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .fixed, .backdrop-blur-sm, [class*="bg-slate-950"] {
-            position: static !important;
-            background: transparent !important;
-            background-color: transparent !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            backdrop-filter: none !important;
-          }
-          .print\\:hidden, header, footer, nav, button {
+
+          .print\\:hidden, .print\\:hidden * {
             display: none !important;
+            visibility: hidden !important;
           }
-          .printable-report-container {
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
-            width: 100% !important;
-            background: #ffffff !important;
-            color: #0f172a !important;
-            border-radius: 0 !important;
-          }
+
           .printable-document {
             font-size: 8pt !important;
             line-height: 1.1 !important;
             color: #0f172a !important;
           }
+
           .printable-table {
             width: 100% !important;
             border-collapse: collapse !important;
             font-size: 7.2pt !important;
           }
+
           .printable-table th {
             background-color: #f1f5f9 !important;
             color: #0f172a !important;
@@ -141,12 +151,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             text-transform: uppercase !important;
             line-height: 1 !important;
           }
+
           .printable-table td {
             font-size: 7.2pt !important;
             padding: 1px 3px !important;
             border: 1px solid #e2e8f0 !important;
             line-height: 1.05 !important;
           }
+
           .page-break-avoid {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
