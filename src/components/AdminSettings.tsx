@@ -29,12 +29,16 @@ interface AdminSettingsProps {
   settings: AdminSettingsType;
   onSaveSettings: (newSettings: AdminSettingsType) => void;
   onResetData: () => void;
+  onManualSync?: () => void;
+  onPullGistData?: (gistId: string, token: string) => Promise<boolean>;
 }
 
 export const AdminSettings: React.FC<AdminSettingsProps> = ({
   settings,
   onSaveSettings,
   onResetData,
+  onManualSync,
+  onPullGistData,
 }) => {
   const [instituteName, setInstituteName] = useState<string>(settings.instituteName);
   const [instituteTagline, setInstituteTagline] = useState<string>(settings.instituteTagline);
@@ -568,15 +572,52 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               </button>
 
               {gistId && (
-                <a
-                  href={`https://gist.github.com/${gistId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-mono"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  View JSON File on GitHub Gist
-                </a>
+                <>
+                  <button
+                    id="pull-gist-data-btn"
+                    type="button"
+                    onClick={async () => {
+                      if (!gistId) return;
+                      setSyncingStatus('Pulling latest data from GitHub Gist...');
+                      if (onPullGistData) {
+                        const success = await onPullGistData(gistId, githubToken);
+                        if (success) {
+                          setSyncingStatus('✅ Remote data loaded successfully from GitHub Gist!');
+                          setTimeout(() => setSyncingStatus(null), 4000);
+                        } else {
+                          setSyncingStatus('❌ Failed to pull data from GitHub Gist.');
+                        }
+                      }
+                    }}
+                    className="bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-500/40 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+                  >
+                    <RefreshCw className="w-4 h-4 text-emerald-300" />
+                    <span>Pull Remote Data Now</span>
+                  </button>
+
+                  <button
+                    id="copy-multi-device-link-btn"
+                    type="button"
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}${window.location.pathname}?gistId=${gistId}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      alert(`Multi-Device Sync URL Copied to Clipboard!\n\n${shareUrl}\n\nOpen this link on any mobile phone or browser to automatically load and sync all teachers & attendance data!`);
+                    }}
+                    className="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+                  >
+                    <Share2 className="w-4 h-4 text-indigo-300" />
+                    <span>Copy Multi-Device Sync Link</span>
+                  </button>
+
+                  <a
+                    href={`https://gist.github.com/${gistId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-mono"
+                  >
+                    View Raw Gist
+                  </a>
+                </>
               )}
             </div>
 
