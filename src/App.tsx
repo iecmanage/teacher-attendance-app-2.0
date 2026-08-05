@@ -29,29 +29,6 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
 
-  // Central Server API Sync (Syncs across all mobile phones and browsers)
-  const fetchServerSync = useCallback(async () => {
-    try {
-      const res = await fetch('/api/sync?t=' + Date.now(), { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.teachers && data.records && data.settings) {
-          setTeachers(data.teachers);
-          saveTeachers(data.teachers);
-          setAttendanceRecords(data.records);
-          saveAttendance(data.records);
-          setSettings(data.settings);
-          saveSettings(data.settings);
-          setLastSyncedTime(
-            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-          );
-        }
-      }
-    } catch (e) {
-      console.warn('Server sync fetch error:', e);
-    }
-  }, []);
-
   const pushServerSync = useCallback(
     async (
       currSettings: AdminSettings,
@@ -77,6 +54,64 @@ export default function App() {
     },
     []
   );
+
+  // Central Server API Sync (Syncs across all mobile phones and browsers)
+  const fetchServerSync = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sync?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.teachers && data.records && data.settings) {
+          const localSettings = getStoredSettings();
+          const localTeachers = getStoredTeachers();
+          const localRecords = getStoredAttendance();
+
+          let mergedSettings = data.settings;
+          let mergedTeachers = data.teachers;
+          let mergedRecords = data.records;
+          let shouldPushLocalToServer = false;
+
+          // If local client has a custom logo but server data lacks it, merge local logo
+          const localLogo = localSettings.logoBase64;
+          const serverLogo = data.settings.logoBase64;
+
+          if (localLogo && !serverLogo) {
+            mergedSettings = {
+              ...data.settings,
+              logoBase64: localLogo,
+            };
+            shouldPushLocalToServer = true;
+          }
+
+          // If local client has modified institute name or customized teachers while server is default
+          if (localSettings.instituteName && localSettings.instituteName !== 'Islamic Education Center' && data.settings.instituteName === 'Islamic Education Center') {
+            mergedSettings = {
+              ...mergedSettings,
+              instituteName: localSettings.instituteName,
+              instituteTagline: localSettings.instituteTagline || mergedSettings.instituteTagline,
+            };
+            shouldPushLocalToServer = true;
+          }
+
+          if (shouldPushLocalToServer) {
+            pushServerSync(mergedSettings, mergedTeachers, mergedRecords);
+          }
+
+          setTeachers(mergedTeachers);
+          saveTeachers(mergedTeachers);
+          setAttendanceRecords(mergedRecords);
+          saveAttendance(mergedRecords);
+          setSettings(mergedSettings);
+          saveSettings(mergedSettings);
+          setLastSyncedTime(
+            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('Server sync fetch error:', e);
+    }
+  }, [pushServerSync]);
 
   // Function to pull remote data from GitHub Gist
   const pullFromGist = useCallback(
