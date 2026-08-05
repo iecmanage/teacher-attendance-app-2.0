@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { AdminSettings as AdminSettingsType } from '../types';
+import { AdminSettings as AdminSettingsType, ShiftType } from '../types';
 import { DEFAULT_INSTITUTE_LOGO_SVG } from '../data/seedData';
+import { QRCodeDisplay } from './QRCodeDisplay';
+import { createNewGist, updateGistData, fetchGistData } from '../utils/githubSync';
+import { getStoredTeachers, getStoredAttendance } from '../utils/storage';
 import {
   Upload,
   Save,
@@ -11,6 +14,14 @@ import {
   Building,
   CheckCircle2,
   FileImage,
+  Moon,
+  Sun,
+  Github,
+  QrCode,
+  Printer,
+  Sparkles,
+  RefreshCw,
+  Share2,
 } from 'lucide-react';
 
 interface AdminSettingsProps {
@@ -34,6 +45,32 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     settings.gracePeriodMinutes
   );
   const [adminPin, setAdminPin] = useState<string>(settings.adminPin);
+
+  // Night Shift state
+  const [shiftType, setShiftType] = useState<ShiftType>(settings.shiftType || 'NIGHT_SHIFT');
+  const [nightShiftStartTime, setNightShiftStartTime] = useState<string>(
+    settings.nightShiftStartTime || '21:00'
+  );
+  const [nightShiftEndTime, setNightShiftEndTime] = useState<string>(
+    settings.nightShiftEndTime || '06:00'
+  );
+  const [overnightCutoffHour, setOvernightCutoffHour] = useState<number>(
+    settings.overnightCutoffHour ?? 7
+  );
+
+  // GitHub Sync state
+  const [githubSyncEnabled, setGithubSyncEnabled] = useState<boolean>(
+    settings.githubSync?.enabled ?? false
+  );
+  const [githubToken, setGithubToken] = useState<string>(settings.githubSync?.githubToken || '');
+  const [gistId, setGistId] = useState<string>(settings.githubSync?.gistId || '');
+  const [customApiUrl, setCustomApiUrl] = useState<string>(
+    settings.githubSync?.customApiUrl || ''
+  );
+
+  const [syncingStatus, setSyncingStatus] = useState<string | null>(null);
+
+  // Geofence
   const [latitude, setLatitude] = useState<number>(settings.geofence.latitude);
   const [longitude, setLongitude] = useState<number>(settings.geofence.longitude);
   const [radiusMeters, setRadiusMeters] = useState<number>(settings.geofence.radiusMeters);
@@ -64,6 +101,48 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     setLogoBase64(DEFAULT_INSTITUTE_LOGO_SVG);
   };
 
+  // Create GitHub Gist helper
+  const handleCreateGitHubGist = async () => {
+    if (!githubToken) {
+      alert('Please enter a GitHub Personal Access Token first.');
+      return;
+    }
+
+    setSyncingStatus('Creating secret Gist on GitHub...');
+    try {
+      const teachers = getStoredTeachers();
+      const records = getStoredAttendance();
+      const newGistId = await createNewGist(githubToken, {
+        version: '1.0',
+        lastUpdated: new Date().toISOString(),
+        instituteName,
+        settings: {
+          ...settings,
+          instituteName,
+          shiftType,
+          githubSync: {
+            enabled: true,
+            gistId: '',
+            githubToken,
+            customApiUrl,
+            autoSync: true,
+          },
+        },
+        teachers,
+        records,
+      });
+
+      setGistId(newGistId);
+      setGithubSyncEnabled(true);
+      setSyncingStatus(`Gist Created Successfully! ID: ${newGistId}`);
+      setTimeout(() => setSyncingStatus(null), 5000);
+    } catch (err: any) {
+      console.error(err);
+      alert(`GitHub Gist Creation Failed: ${err.message}`);
+      setSyncingStatus(null);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -75,12 +154,24 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       defaultTargetArrivalTime,
       gracePeriodMinutes: Number(gracePeriodMinutes),
       adminPin,
+      shiftType,
+      nightShiftStartTime,
+      nightShiftEndTime,
+      overnightCutoffHour: Number(overnightCutoffHour),
       geofence: {
         latitude: Number(latitude),
         longitude: Number(longitude),
         radiusMeters: Number(radiusMeters),
         instituteAddress,
         strictEnforcement,
+      },
+      githubSync: {
+        enabled: githubSyncEnabled,
+        githubToken,
+        gistId,
+        customApiUrl,
+        autoSync: true,
+        lastSyncedAt: new Date().toISOString(),
       },
     };
 
@@ -310,6 +401,224 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             <label htmlFor="settings-geofence-strict-toggle" className="text-xs text-slate-700 dark:text-slate-300 font-medium">
               Strictly Block Check-Ins Outside Geofence (If unchecked, check-ins are allowed but flagged with exact distance)
             </label>
+          </div>
+        </div>
+
+        {/* Night Shift & Overnight Shift Configuration Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold font-serif text-slate-900 dark:text-white flex items-center gap-2">
+                <Moon className="w-5 h-5 text-indigo-500" />
+                <span>Shift Schedule Mode (Overnight / Night Shift Support)</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Configure whether teachers work standard day shifts or overnight night shifts (e.g., 09:00 PM Saturday to 06:00 AM Sunday).
+              </p>
+            </div>
+
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">
+              {shiftType === 'NIGHT_SHIFT' ? '🌙 Night Shift Active' : '☀️ Day Shift Active'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Shift Type
+              </label>
+              <select
+                id="settings-shift-type"
+                value={shiftType}
+                onChange={(e) => setShiftType(e.target.value as ShiftType)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="NIGHT_SHIFT">🌙 Night Shift (Overnight e.g. 09:00 PM Sat → 06:00 AM Sun)</option>
+                <option value="DAY_SHIFT">☀️ Day Shift (Standard e.g. 08:00 AM → 04:00 PM)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Night Shift Target Arrival Time
+              </label>
+              <input
+                id="settings-night-shift-start"
+                type="time"
+                value={nightShiftStartTime}
+                onChange={(e) => setNightShiftStartTime(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Night Shift Target Departure Time (Next Morning)
+              </label>
+              <input
+                id="settings-night-shift-end"
+                type="time"
+                value={nightShiftEndTime}
+                onChange={(e) => setNightShiftEndTime(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Overnight Shift Cutoff Hour (0 to 12 AM)
+              </label>
+              <input
+                id="settings-overnight-cutoff"
+                type="number"
+                min="1"
+                max="12"
+                value={overnightCutoffHour}
+                onChange={(e) => setOvernightCutoffHour(parseInt(e.target.value, 10) || 7)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="p-3 bg-indigo-950/40 border border-indigo-800/60 rounded-xl text-xs text-indigo-200 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Cross-Day Logic Explanation:</strong> In Night Shift mode, if a teacher arrives Saturday at 09:00 PM and leaves Sunday at 06:00 AM (or checks in after midnight before 0{overnightCutoffHour}:00 AM Sunday), the attendance record is correctly credited to <strong>Saturday's date</strong>.
+            </span>
+          </div>
+        </div>
+
+        {/* GitHub JSON Storage & Remote Data Sync Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold font-serif text-slate-900 dark:text-white flex items-center gap-2">
+                <Github className="w-5 h-5 text-slate-900 dark:text-slate-100" />
+                <span>Central Cloud Storage (GitHub Gist / Remote JSON Sync)</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Store and sync all attendance JSON data directly on GitHub or custom API so teachers can access and record attendance from their personal mobile devices.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                id="settings-github-enabled"
+                type="checkbox"
+                checked={githubSyncEnabled}
+                onChange={(e) => setGithubSyncEnabled(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+              />
+              <label htmlFor="settings-github-enabled" className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Enable GitHub Gist Central Storage Sync
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  GitHub Personal Access Token (PAT)
+                </label>
+                <input
+                  id="settings-github-token"
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  GitHub Gist ID
+                </label>
+                <input
+                  id="settings-gist-id"
+                  type="text"
+                  placeholder="e.g. 8a9b7c6d5e4f..."
+                  value={gistId}
+                  onChange={(e) => setGistId(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                id="create-gist-btn"
+                type="button"
+                onClick={handleCreateGitHubGist}
+                className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Create New Secret Gist on GitHub</span>
+              </button>
+
+              {gistId && (
+                <a
+                  href={`https://gist.github.com/${gistId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-mono"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  View JSON File on GitHub Gist
+                </a>
+              )}
+            </div>
+
+            {syncingStatus && (
+              <p className="text-xs font-mono text-emerald-400 bg-slate-950 p-2.5 rounded-xl border border-emerald-800">
+                {syncingStatus}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Printable Institute Station Check-In QR Code Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold font-serif text-slate-900 dark:text-white flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-amber-500" />
+                <span>Official Campus Entrance QR Code Station</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Print or display this official QR poster at the Islamic Education Center main entrance gate.
+              </p>
+            </div>
+
+            <button
+              id="print-campus-qr-btn"
+              type="button"
+              onClick={() => window.print()}
+              className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition-all"
+            >
+              <Printer className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Print Campus QR Poster</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-around p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center gap-6">
+            <div className="p-3 bg-slate-900 rounded-2xl border border-amber-500/30 shadow-xl">
+              <QRCodeDisplay value="IEC-CAMPUS-CHECKIN-STATION-2026" size={200} />
+            </div>
+
+            <div className="text-left space-y-2 max-w-sm text-white">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-800">
+                {instituteName}
+              </span>
+              <h4 className="text-xl font-bold font-serif text-white">Campus Check-In Poster</h4>
+              <p className="text-xs text-slate-300">
+                Teachers arriving at campus open their Faculty Attendance Portal on their smartphone, tap <strong>"Scan QR Code"</strong>, and aim their camera at this QR station.
+              </p>
+              <div className="pt-2 text-[11px] font-mono text-emerald-400">
+                QR Signature: IEC-CAMPUS-CHECKIN-STATION-2026
+              </div>
+            </div>
           </div>
         </div>
 

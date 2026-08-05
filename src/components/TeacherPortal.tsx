@@ -7,11 +7,14 @@ import {
 } from '../utils/geofence';
 import {
   getTodayDateString,
+  getEffectiveShiftDate,
   getCurrentTimeString,
   formatTime12Hour,
   evaluateCheckInTime,
   getStatusBadgeInfo,
 } from '../utils/timeUtils';
+import { QRScannerModal } from './QRScannerModal';
+import { QRCodeDisplay } from './QRCodeDisplay';
 import {
   MapPin,
   CheckCircle2,
@@ -25,6 +28,10 @@ import {
   User,
   ShieldCheck,
   RefreshCw,
+  Camera,
+  Moon,
+  Sun,
+  Share2,
 } from 'lucide-react';
 
 interface TeacherPortalProps {
@@ -46,6 +53,10 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const [tokenVerified, setTokenVerified] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
 
+  // QR Scanner Modal State
+  const [isQRModalOpen, setIsQRModalOpen] = useState<boolean>(false);
+  const [showPersonalQRBadge, setShowPersonalQRBadge] = useState<boolean>(false);
+
   // GPS / Geofence State
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
@@ -61,11 +72,12 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('code');
-    const tokenFromUrl = urlParams.get('token');
 
     if (codeFromUrl) {
       const match = teachers.find(
-        (t) => t.accessCode.toUpperCase() === codeFromUrl.toUpperCase() || t.employeeId.toUpperCase() === codeFromUrl.toUpperCase()
+        (t) =>
+          t.accessCode.toUpperCase() === codeFromUrl.toUpperCase() ||
+          t.employeeId.toUpperCase() === codeFromUrl.toUpperCase()
       );
       if (match) {
         setSelectedTeacher(match);
@@ -80,6 +92,40 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     }
   }, [teachers]);
 
+  // Handle scanned QR Code text from Camera
+  const handleQRScanSuccess = (scannedText: string) => {
+    setIsQRModalOpen(false);
+    const code = scannedText.trim().toUpperCase();
+
+    // Check if scanned QR matches teacher access code or employee ID
+    const matchedTeacher = teachers.find(
+      (t) =>
+        t.accessCode.toUpperCase() === code ||
+        t.employeeId.toUpperCase() === code ||
+        code.includes(t.accessCode.toUpperCase())
+    );
+
+    if (matchedTeacher) {
+      setSelectedTeacher(matchedTeacher);
+      setTokenVerified(true);
+      setAccessCodeInput(matchedTeacher.accessCode);
+      setSuccessBanner(`QR Recognized! Verified ${matchedTeacher.name}. Tapping Check-In below.`);
+      setTimeout(() => setSuccessBanner(null), 5000);
+    } else if (code.includes('IEC') || code.includes('CAMPUS') || code.includes('ATTENDANCE')) {
+      // Campus QR scanned! Perform check-in for current teacher
+      if (selectedTeacher) {
+        setSuccessBanner(`Campus QR Scanned! Checking in ${selectedTeacher.name}...`);
+        setTimeout(() => {
+          handleCheckIn();
+        }, 600);
+      } else {
+        alert('Campus QR scanned! Please select your Teacher profile first.');
+      }
+    } else {
+      alert(`Scanned QR Code (${scannedText}) does not match any registered Teacher or Campus QR.`);
+    }
+  };
+
   // Request user GPS location
   const fetchCurrentLocation = () => {
     setIsLocating(true);
@@ -88,7 +134,6 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser.');
       setIsLocating(false);
-      // Fallback to campus center position
       simulateLocation(15);
       return;
     }
@@ -176,11 +221,13 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     }
   };
 
-  // Check today's record for selected teacher
-  const todayStr = getTodayDateString();
+  // Effective Shift Date (Night Shift aware!)
+  const effectiveShiftDate = getEffectiveShiftDate(settings);
+  const isNightShiftActive = settings.shiftType === 'NIGHT_SHIFT';
+
   const todayRecord = selectedTeacher
     ? attendanceRecords.find(
-        (r) => r.teacherId === selectedTeacher.id && r.date === todayStr
+        (r) => r.teacherId === selectedTeacher.id && r.date === effectiveShiftDate
       )
     : null;
 
@@ -207,15 +254,22 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     const evaluation = evaluateCheckInTime(
       checkInTime24,
       targetTime,
-      settings.gracePeriodMinutes
+      settings.gracePeriodMinutes,
+      isNightShiftActive
     );
 
-    const recordId = todayRecord ? todayRecord.id : `att-${selectedTeacher.id}-${todayStr}`;
+    const recordId = todayRecord
+      ? todayRecord.id
+      : `att-${selectedTeacher.id}-${effectiveShiftDate}`;
+
+    const shiftLabel = isNightShiftActive
+      ? `${effectiveShiftDate} (Night Shift: ${formatTime12Hour(settings.nightShiftStartTime)} - ${formatTime12Hour(settings.nightShiftEndTime)})`
+      : `${effectiveShiftDate}`;
 
     const newRecord: AttendanceRecord = {
       id: recordId,
       teacherId: selectedTeacher.id,
-      date: todayStr,
+      date: effectiveShiftDate,
       checkInTime: checkInTime24,
       checkOutTime: todayRecord?.checkOutTime,
       status: evaluation.isOnTime ? 'ON_TIME' : 'LATE',
@@ -225,8 +279,11 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
       isOnTime: evaluation.isOnTime,
       lateMinutes: evaluation.lateMinutes,
       targetArrivalTime: targetTime,
+      isNightShift: isNightShiftActive,
+      shiftDateLabel: shiftLabel,
+      checkInMethod: 'GPS_GEOFENCE',
       notes: evaluation.isOnTime
-        ? 'Arrived On Time'
+        ? `Arrived On Time (${isNightShiftActive ? 'Night Shift' : 'Day Shift'})`
         : `Late Arrival by ${evaluation.lateMinutes} mins`,
       lastUpdated: new Date().toISOString(),
     };
@@ -234,12 +291,12 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     onSaveAttendance(newRecord);
 
     const msg = evaluation.isOnTime
-      ? `Check-In Successful! Marked ON TIME at ${formatTime12Hour(
-          checkInTime24
-        )} (Distance: ${formatDistance(currentDist)}).`
+      ? `Check-In Successful! Marked ON TIME for ${effectiveShiftDate} ${
+          isNightShiftActive ? '(Night Shift)' : ''
+        } at ${formatTime12Hour(checkInTime24)}.`
       : `Check-In Recorded! Marked LATE by ${
           evaluation.lateMinutes
-        } mins at ${formatTime12Hour(checkInTime24)}.`;
+        } mins for ${effectiveShiftDate} at ${formatTime12Hour(checkInTime24)}.`;
 
     setSuccessBanner(msg);
     setTimeout(() => setSuccessBanner(null), 6000);
@@ -317,6 +374,28 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                   : 'Enter access code or select your profile below to mark attendance.'}
               </p>
             </div>
+            {/* Quick Action Buttons: Scan QR Code & Digital Badge */}
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-emerald-800/50">
+              <button
+                id="scan-qr-code-btn"
+                onClick={() => setIsQRModalOpen(true)}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Scan QR Code to Check In</span>
+              </button>
+
+              {selectedTeacher && (
+                <button
+                  id="my-qr-badge-btn"
+                  onClick={() => setShowPersonalQRBadge(true)}
+                  className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
+                >
+                  <QrCode className="w-4 h-4 text-amber-400" />
+                  <span>My QR Badge</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Quick Teacher Switcher dropdown for smooth demo testing */}
@@ -393,6 +472,30 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
               <span>Verify & Continue Check-In</span>
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Night Shift Banner Notice */}
+      {isNightShiftActive && (
+        <div className="bg-indigo-950/80 border-2 border-indigo-500/50 p-4 rounded-2xl text-indigo-100 shadow-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-900 border border-indigo-700 rounded-xl text-amber-300 shrink-0">
+              <Moon className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-300 bg-amber-950/80 border border-amber-600/50 px-2.5 py-0.5 rounded-full uppercase">
+                  Night Shift Active
+                </span>
+                <span className="text-xs text-indigo-300">
+                  {formatTime12Hour(settings.nightShiftStartTime)} Sat → {formatTime12Hour(settings.nightShiftEndTime)} Sun
+                </span>
+              </div>
+              <p className="text-xs text-indigo-200 mt-1 font-medium">
+                🌙 Overnight shift attendance automatically logs under Saturday's date ({effectiveShiftDate}), even when checking in/out after midnight until {settings.overnightCutoffHour}:00 AM Sunday.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -697,6 +800,57 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* QR Scanner Live Camera Modal */}
+      <QRScannerModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        onScanSuccess={handleQRScanSuccess}
+      />
+
+      {/* Personal Teacher Digital QR Badge Modal */}
+      {showPersonalQRBadge && selectedTeacher && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl text-white">
+            <button
+              onClick={() => setShowPersonalQRBadge(false)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800"
+            >
+              ✕
+            </button>
+
+            <div className="w-16 h-16 rounded-2xl bg-emerald-950 border-2 border-amber-400/60 p-1 flex items-center justify-center mx-auto overflow-hidden shadow-lg">
+              {selectedTeacher.avatarUrl ? (
+                <img
+                  src={selectedTeacher.avatarUrl}
+                  alt={selectedTeacher.name}
+                  className="w-full h-full object-cover rounded-xl"
+                />
+              ) : (
+                <User className="w-8 h-8 text-amber-300" />
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold font-serif text-white">{selectedTeacher.name}</h3>
+              <p className="text-xs text-amber-300 font-medium mt-0.5">{selectedTeacher.designation}</p>
+              <p className="text-[11px] text-slate-400 font-mono mt-0.5">ID: {selectedTeacher.employeeId}</p>
+            </div>
+
+            {/* QR Code Canvas */}
+            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 inline-block shadow-inner">
+              <QRCodeDisplay value={selectedTeacher.accessCode} size={210} />
+            </div>
+
+            <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700 text-xs text-slate-300 font-mono">
+              Access Code: <span className="text-emerald-400 font-bold">{selectedTeacher.accessCode}</span>
+            </div>
+
+            <p className="text-[11px] text-slate-400">
+              Show this QR badge to the Institute Kiosk / Admin scanner to check in instantly.
+            </p>
           </div>
         </div>
       )}

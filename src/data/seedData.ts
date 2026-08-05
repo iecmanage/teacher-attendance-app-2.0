@@ -6,16 +6,27 @@ export const INITIAL_ADMIN_SETTINGS: AdminSettings = {
   instituteName: 'Islamic Education Center',
   instituteTagline: 'Excellence in Islamic Studies & Character Building',
   logoBase64: DEFAULT_INSTITUTE_LOGO_SVG,
-  defaultTargetArrivalTime: '08:00',
+  defaultTargetArrivalTime: '21:00', // 09:00 PM (Night Shift)
   gracePeriodMinutes: 10,
   adminPin: '1234',
   requireDynamicUrlToken: true,
+  shiftType: 'NIGHT_SHIFT',
+  nightShiftStartTime: '21:00', // 09:00 PM
+  nightShiftEndTime: '06:00', // 06:00 AM next day
+  overnightCutoffHour: 7, // Hours after midnight (00:00 - 07:00) that count as previous day's night shift
   geofence: {
     latitude: 24.8607,
     longitude: 67.0011,
     radiusMeters: 200,
     instituteAddress: 'Plot 42, Main Campus Avenue, Islamic Education Center',
     strictEnforcement: false, // Default records attendance with warning if outside
+  },
+  githubSync: {
+    enabled: false,
+    gistId: '',
+    githubToken: '',
+    customApiUrl: '',
+    autoSync: true,
   },
 };
 

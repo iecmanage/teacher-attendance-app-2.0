@@ -12,7 +12,22 @@ const ATTENDANCE_KEY = 'iec_attendance_records_v1';
 export function getStoredSettings(): AdminSettings {
   try {
     const data = localStorage.getItem(SETTINGS_KEY);
-    if (data) return JSON.parse(data);
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Merge with initial defaults to guarantee all fields exist
+      return {
+        ...INITIAL_ADMIN_SETTINGS,
+        ...parsed,
+        geofence: {
+          ...INITIAL_ADMIN_SETTINGS.geofence,
+          ...(parsed.geofence || {}),
+        },
+        githubSync: {
+          ...INITIAL_ADMIN_SETTINGS.githubSync,
+          ...(parsed.githubSync || {}),
+        },
+      };
+    }
   } catch (e) {
     console.error('Failed to load settings from storage', e);
   }

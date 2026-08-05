@@ -1,8 +1,26 @@
-import { AttendanceStatus } from '../types';
+import { AttendanceStatus, AdminSettings } from '../types';
 
 export function getTodayDateString(): string {
   const today = new Date();
   return formatDateToYYYYMMDD(today);
+}
+
+// Computes the effective attendance date considering Night Shift (overnight shifts)
+// e.g. If it's Sunday 02:30 AM, but night shift cutoff is 7 AM, effective shift date is Saturday!
+export function getEffectiveShiftDate(settings?: AdminSettings): string {
+  const now = new Date();
+  
+  if (settings?.shiftType === 'NIGHT_SHIFT') {
+    const cutoff = settings.overnightCutoffHour ?? 7; // Default 7 AM
+    if (now.getHours() < cutoff) {
+      // It's after midnight but before morning cutoff -> attribute to yesterday
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return formatDateToYYYYMMDD(yesterday);
+    }
+  }
+
+  return formatDateToYYYYMMDD(now);
 }
 
 export function formatDateToYYYYMMDD(date: Date): string {
@@ -31,23 +49,37 @@ export function formatTime12Hour(time24?: string): string {
   return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 }
 
-// Check if check-in time is late compared to target time (considering grace period)
+// Check if check-in time is late compared to target time (considering grace period & night shift)
 export function evaluateCheckInTime(
   checkInTime24: string,
   targetArrivalTime24: string,
-  gracePeriodMinutes: number = 0
+  gracePeriodMinutes: number = 0,
+  isNightShift: boolean = false
 ): { isOnTime: boolean; lateMinutes: number } {
   const [cHours, cMins] = checkInTime24.split(':').map(Number);
   const [tHours, tMins] = targetArrivalTime24.split(':').map(Number);
 
-  const checkInTotalMins = cHours * 60 + cMins;
-  const targetTotalMins = tHours * 60 + tMins;
-  const allowedTotalMins = targetTotalMins + gracePeriodMinutes;
+  let checkInMins = cHours * 60 + cMins;
+  let targetMins = tHours * 60 + tMins;
 
-  if (checkInTotalMins <= allowedTotalMins) {
+  // Handle night shift crossing midnight
+  if (isNightShift) {
+    // If target is in evening (e.g. 21:00) and check-in is early morning (e.g. 02:00 AM)
+    if (cHours < 12 && tHours >= 12) {
+      checkInMins += 24 * 60; // Add 24 hours to check-in mins
+    }
+    // If check-in is earlier in evening before target (e.g. 20:30 vs 21:00)
+    if (cHours >= 12 && tHours >= 12 && cHours < tHours - 4) {
+      // Early arrival
+    }
+  }
+
+  const allowedMins = targetMins + gracePeriodMinutes;
+
+  if (checkInMins <= allowedMins) {
     return { isOnTime: true, lateMinutes: 0 };
   } else {
-    const lateMinutes = checkInTotalMins - targetTotalMins;
+    const lateMinutes = checkInMins - targetMins;
     return { isOnTime: false, lateMinutes };
   }
 }
