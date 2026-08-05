@@ -615,7 +615,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
           <div className="flex flex-col sm:flex-row items-center justify-around p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center gap-6">
             <div className="p-3 bg-slate-900 rounded-2xl border border-amber-500/30 shadow-xl">
               <QRCodeDisplay
-                value={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}?wallQr=IEC-WALL-CHECKIN`}
+                value={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}?wallQr=IEC-WALL-CHECKIN&v=${Date.now()}`}
                 size={200}
               />
             </div>
