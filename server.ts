@@ -138,6 +138,18 @@ async function loadStoreData() {
 
 async function saveStoreData(newData: any) {
   const ts = newData.lastUpdated || new Date().toISOString();
+  // If storeData exists, prevent stale writes unless incoming timestamp is newer
+  if (storeData && newData.lastUpdated) {
+    const incoming = new Date(newData.lastUpdated).getTime();
+    const current = new Date(storeData.lastUpdated || 0).getTime();
+    if (incoming < current) {
+      const err: any = new Error('Incoming data is older than current store (stale write)');
+      err.code = 'STALE_WRITE';
+      err.currentStore = storeData;
+      throw err;
+    }
+  }
+
   const merged = {
     ...storeData,
     ...(newData.settings ? { settings: newData.settings } : {}),
@@ -178,8 +190,11 @@ app.post('/api/sync', async (req, res) => {
   try {
     await saveStoreData({ settings, teachers, records, lastUpdated });
     return res.json({ success: true, storeData });
-  } catch (err) {
+  } catch (err: any) {
     console.error('POST /api/sync failed', err);
+    if (err.code === 'STALE_WRITE') {
+      return res.status(409).json({ success: false, error: 'stale_write', currentStore: err.currentStore });
+    }
     return res.status(500).json({ success: false, error: String(err) });
   }
 });
