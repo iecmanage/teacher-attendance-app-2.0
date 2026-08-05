@@ -8,7 +8,10 @@ import {
   getStoredAttendance,
   saveAttendance,
   resetAllDataToDefault,
+  getStoredLastUpdated,
+  saveLastUpdated,
 } from './utils/storage';
+import { DEFAULT_INSTITUTE_LOGO_SVG } from './data/seedData';
 import { fetchGistData, updateGistData, FullAttendanceExport } from './utils/githubSync';
 import { Header } from './components/Header';
 import { PinLockModal } from './components/PinLockModal';
@@ -33,16 +36,27 @@ export default function App() {
     async (
       currSettings: AdminSettings,
       currTeachers: Teacher[],
-      currRecords: AttendanceRecord[]
+      currRecords: AttendanceRecord[],
+      customTimestamp?: string
     ) => {
+      const ts = customTimestamp || new Date().toISOString();
+      const settingsWithTs = { ...currSettings, lastUpdated: ts };
+
+      // Save locally
+      saveSettings(settingsWithTs);
+      saveTeachers(currTeachers);
+      saveAttendance(currRecords);
+      saveLastUpdated(ts);
+
       try {
         await fetch('/api/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            settings: currSettings,
+            settings: settingsWithTs,
             teachers: currTeachers,
             records: currRecords,
+            lastUpdated: ts,
           }),
         });
         setLastSyncedTime(
@@ -62,50 +76,50 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data && data.teachers && data.records && data.settings) {
+          const localLastUpdated = getStoredLastUpdated();
+          const serverLastUpdated = data.lastUpdated || data.settings?.lastUpdated || '1970-01-01T00:00:00.000Z';
+
           const localSettings = getStoredSettings();
           const localTeachers = getStoredTeachers();
           const localRecords = getStoredAttendance();
 
-          let mergedSettings = data.settings;
-          let mergedTeachers = data.teachers;
-          let mergedRecords = data.records;
-          let shouldPushLocalToServer = false;
+          // Check if local has customized data (e.g. uploaded custom logo vs server seed logo)
+          const localHasCustomLogo =
+            localSettings.logoBase64 && localSettings.logoBase64 !== DEFAULT_INSTITUTE_LOGO_SVG;
+          const serverHasDefaultLogo = data.settings.logoBase64 === DEFAULT_INSTITUTE_LOGO_SVG;
 
-          // If local client has a custom logo but server data lacks it, merge local logo
-          const localLogo = localSettings.logoBase64;
-          const serverLogo = data.settings.logoBase64;
+          const localHasCustomName =
+            localSettings.instituteName && localSettings.instituteName !== 'Islamic Education Center';
+          const serverHasDefaultName = data.settings.instituteName === 'Islamic Education Center';
 
-          if (localLogo && !serverLogo) {
-            mergedSettings = {
-              ...data.settings,
-              logoBase64: localLogo,
-            };
-            shouldPushLocalToServer = true;
+          const localTime = new Date(localLastUpdated).getTime();
+          const serverTime = new Date(serverLastUpdated).getTime();
+
+          // If local client has strictly newer data, OR if local client has custom user edits while server is default seed data
+          if (
+            localTime > serverTime ||
+            (localHasCustomLogo && serverHasDefaultLogo) ||
+            (localHasCustomName && serverHasDefaultName)
+          ) {
+            // Force server store to be updated with local customized user data!
+            const syncTs = localTime > 0 ? localLastUpdated : new Date().toISOString();
+            await pushServerSync(localSettings, localTeachers, localRecords, syncTs);
+            return;
           }
 
-          // If local client has modified institute name or customized teachers while server is default
-          if (localSettings.instituteName && localSettings.instituteName !== 'Islamic Education Center' && data.settings.instituteName === 'Islamic Education Center') {
-            mergedSettings = {
-              ...mergedSettings,
-              instituteName: localSettings.instituteName,
-              instituteTagline: localSettings.instituteTagline || mergedSettings.instituteTagline,
-            };
-            shouldPushLocalToServer = true;
+          // Otherwise, server data is newer or authoritative. Update local state and storage!
+          if (serverTime >= localTime) {
+            setTeachers(data.teachers);
+            saveTeachers(data.teachers);
+            setAttendanceRecords(data.records);
+            saveAttendance(data.records);
+            setSettings(data.settings);
+            saveSettings(data.settings);
+            saveLastUpdated(serverLastUpdated);
+            setLastSyncedTime(
+              new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            );
           }
-
-          if (shouldPushLocalToServer) {
-            pushServerSync(mergedSettings, mergedTeachers, mergedRecords);
-          }
-
-          setTeachers(mergedTeachers);
-          saveTeachers(mergedTeachers);
-          setAttendanceRecords(mergedRecords);
-          saveAttendance(mergedRecords);
-          setSettings(mergedSettings);
-          saveSettings(mergedSettings);
-          setLastSyncedTime(
-            new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-          );
         }
       }
     } catch (e) {
@@ -170,7 +184,10 @@ export default function App() {
       currTeachers: Teacher[],
       currRecords: AttendanceRecord[]
     ) => {
-      await pushServerSync(currSettings, currTeachers, currRecords);
+      const ts = new Date().toISOString();
+      const settingsWithTs = { ...currSettings, lastUpdated: ts };
+
+      await pushServerSync(settingsWithTs, currTeachers, currRecords, ts);
 
       const gid = currSettings.githubSync?.gistId;
       const tok = currSettings.githubSync?.githubToken;
@@ -181,9 +198,9 @@ export default function App() {
       try {
         const exportData: FullAttendanceExport = {
           version: '1.0',
-          lastUpdated: new Date().toISOString(),
+          lastUpdated: ts,
           instituteName: currSettings.instituteName,
-          settings: currSettings,
+          settings: settingsWithTs,
           teachers: currTeachers,
           records: currRecords,
         };
@@ -262,9 +279,10 @@ export default function App() {
 
   // Handlers for Settings
   const handleSaveSettings = (newSettings: AdminSettings) => {
-    setSettings(newSettings);
-    saveSettings(newSettings);
-    pushToGist(newSettings, teachers, attendanceRecords);
+    const ts = new Date().toISOString();
+    const updatedSettings = { ...newSettings, lastUpdated: ts };
+    setSettings(updatedSettings);
+    pushToGist(updatedSettings, teachers, attendanceRecords);
   };
 
   // Handlers for Teachers
@@ -311,10 +329,12 @@ export default function App() {
   // Handler for full Data Reset
   const handleResetData = () => {
     const res = resetAllDataToDefault();
-    setSettings(res.settings);
+    const ts = new Date().toISOString();
+    const resetSettings = { ...res.settings, lastUpdated: ts };
+    setSettings(resetSettings);
     setTeachers(res.teachers);
     setAttendanceRecords(res.records);
-    pushToGist(res.settings, res.teachers, res.records);
+    pushToGist(resetSettings, res.teachers, res.records);
   };
 
   const handleUnlockAdminSuccess = () => {
