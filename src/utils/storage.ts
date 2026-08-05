@@ -8,6 +8,23 @@ import {
 const SETTINGS_KEY = 'iec_attendance_settings_v1';
 const TEACHERS_KEY = 'iec_attendance_teachers_v1';
 const ATTENDANCE_KEY = 'iec_attendance_records_v1';
+const LAST_UPDATED_KEY = 'iec_attendance_last_updated_v1';
+
+export function getStoredLastUpdated(): string {
+  try {
+    return localStorage.getItem(LAST_UPDATED_KEY) || '1970-01-01T00:00:00.000Z';
+  } catch (e) {
+    return '1970-01-01T00:00:00.000Z';
+  }
+}
+
+export function saveLastUpdated(ts: string): void {
+  try {
+    localStorage.setItem(LAST_UPDATED_KEY, ts);
+  } catch (e) {
+    console.error('Failed to save last updated timestamp', e);
+  }
+}
 
 export function getStoredSettings(): AdminSettings {
   try {
