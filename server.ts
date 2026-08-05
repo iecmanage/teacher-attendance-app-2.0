@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-import fetch from 'node-fetch';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import {
   INITIAL_ADMIN_SETTINGS,
@@ -56,7 +55,7 @@ async function readFromGist() {
   const gistId = process.env.GIST_ID;
   const token = process.env.GIST_TOKEN;
   if (!gistId) throw new Error('GIST_ID not configured');
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const res = await (globalThis as any).fetch(`https://api.github.com/gists/${gistId}`, {
     headers: token ? { Authorization: `token ${token}` } : undefined,
   });
   if (!res.ok) throw new Error(`Gist read failed: ${res.status}`);
@@ -85,7 +84,7 @@ async function writeToGist(obj: any) {
       },
     },
   };
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const res = await (globalThis as any).fetch(`https://api.github.com/gists/${gistId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `token ${token}`,
