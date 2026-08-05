@@ -14,7 +14,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   isOpen,
   onClose,
   onScanSuccess,
-  title = 'Scan Campus Check-In QR Code',
+  title = 'Scan Institute Check-In QR Code',
   subtitle = 'Point your camera at the Institute QR Code or your Teacher ID Badge',
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);

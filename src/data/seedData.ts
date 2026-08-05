@@ -18,7 +18,7 @@ export const INITIAL_ADMIN_SETTINGS: AdminSettings = {
     latitude: 24.8607,
     longitude: 67.0011,
     radiusMeters: 200,
-    instituteAddress: 'Plot 42, Main Campus Avenue, Islamic Education Center',
+    instituteAddress: 'Islamic Education Center Online Academy',
     strictEnforcement: false, // Default records attendance with warning if outside
   },
   githubSync: {

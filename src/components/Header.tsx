@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {settings.instituteName}
                 </h1>
                 <span className="hidden sm:inline-block text-[10px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Verified Campus
+                  Verified Online Academy
                 </span>
               </div>
               <p className="text-xs text-slate-400 truncate max-w-xs sm:max-w-sm">

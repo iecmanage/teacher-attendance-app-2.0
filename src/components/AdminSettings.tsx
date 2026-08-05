@@ -4,6 +4,7 @@ import { DEFAULT_INSTITUTE_LOGO_SVG } from '../data/seedData';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { createNewGist, updateGistData, fetchGistData } from '../utils/githubSync';
 import { getStoredTeachers, getStoredAttendance } from '../utils/storage';
+import { formatTime12Hour } from '../utils/timeUtils';
 import {
   Upload,
   Save,
@@ -289,8 +290,11 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Global Target Arrival Time (HH:mm)
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Global Target Arrival Time</span>
+                <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                  {formatTime12Hour(defaultTargetArrivalTime)}
+                </span>
               </label>
               <input
                 id="settings-default-target-time"
@@ -439,8 +443,11 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Night Shift Target Arrival Time
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Night Shift Target Arrival Time</span>
+                <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-800">
+                  {formatTime12Hour(nightShiftStartTime)}
+                </span>
               </label>
               <input
                 id="settings-night-shift-start"
@@ -452,8 +459,11 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Night Shift Target Departure Time (Next Morning)
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span>Night Shift Target Departure Time</span>
+                <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">
+                  {formatTime12Hour(nightShiftEndTime)}
+                </span>
               </label>
               <input
                 id="settings-night-shift-end"
@@ -584,10 +594,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             <div>
               <h3 className="text-lg font-bold font-serif text-slate-900 dark:text-white flex items-center gap-2">
                 <QrCode className="w-5 h-5 text-amber-500" />
-                <span>Official Campus Entrance QR Code Station</span>
+                <span>Official Online Academy QR Code Check-In Station</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Print or display this official QR poster at the Islamic Education Center main entrance gate.
+                Print or display this official QR poster for online academy check-in at Islamic Education Center.
               </p>
             </div>
 
@@ -598,25 +608,25 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition-all"
             >
               <Printer className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Print Campus QR Poster</span>
+              <span>Print Station QR Poster</span>
             </button>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-around p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center gap-6">
             <div className="p-3 bg-slate-900 rounded-2xl border border-amber-500/30 shadow-xl">
-              <QRCodeDisplay value="IEC-CAMPUS-CHECKIN-STATION-2026" size={200} />
+              <QRCodeDisplay value="IEC-ONLINE-ACADEMY-CHECKIN-2026" size={200} />
             </div>
 
             <div className="text-left space-y-2 max-w-sm text-white">
               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-800">
                 {instituteName}
               </span>
-              <h4 className="text-xl font-bold font-serif text-white">Campus Check-In Poster</h4>
+              <h4 className="text-xl font-bold font-serif text-white">Online Academy Check-In Poster</h4>
               <p className="text-xs text-slate-300">
-                Teachers arriving at campus open their Faculty Attendance Portal on their smartphone, tap <strong>"Scan QR Code"</strong>, and aim their camera at this QR station.
+                Teachers open their Faculty Attendance Portal on their smartphone or PC, tap <strong>"Scan QR Code"</strong>, and scan this station code to log attendance instantly.
               </p>
               <div className="pt-2 text-[11px] font-mono text-emerald-400">
-                QR Signature: IEC-CAMPUS-CHECKIN-STATION-2026
+                QR Signature: IEC-ONLINE-ACADEMY-CHECKIN-2026
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AttendanceRecord, AttendanceStatus, Teacher } from '../types';
+import { formatTime12Hour } from '../utils/timeUtils';
 import { X, Save, Clock, MapPin, Calendar, FileText } from 'lucide-react';
 
 interface EditRecordModalProps {
@@ -120,9 +121,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
           {status !== 'ABSENT' && status !== 'OFF_DAY' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Check-In Time</span>
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Check-In Time</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
+                    {formatTime12Hour(checkInTime)}
+                  </span>
                 </label>
                 <input
                   id="edit-record-checkin-time"
@@ -134,9 +140,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Check-Out Time</span>
+                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Check-Out Time</span>
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-mono font-bold bg-amber-950 px-1.5 py-0.5 rounded border border-amber-800">
+                    {formatTime12Hour(checkOutTime)}
+                  </span>
                 </label>
                 <input
                   id="edit-record-checkout-time"

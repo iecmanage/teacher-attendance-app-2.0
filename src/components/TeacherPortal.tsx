@@ -521,7 +521,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-white font-serif">
-                      Campus Geofence Status
+                      Institute Geofence Status
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Target: {settings.geofence.instituteAddress} (Radius: {settings.geofence.radiusMeters}m)
@@ -567,7 +567,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
                     </span>
                     <span className="text-xs block font-semibold mt-0.5">
                       {isWithinBounds
-                        ? 'Inside Campus Geofence Bounds ✅'
+                        ? 'Inside Institute Geofence Bounds ✅'
                         : 'Outside Allowed Geofence Radius ⚠️'}
                     </span>
                   </div>
@@ -629,9 +629,9 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
             {/* Check-In / Check-Out Action Panel */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-800">
               <h3 className="text-base font-bold text-slate-900 dark:text-white font-serif mb-4 flex items-center justify-between">
-                <span>Today's Attendance Action</span>
-                <span className="text-xs font-sans font-normal text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
-                  {todayStr}
+                <span>Attendance Action</span>
+                <span className="text-xs font-sans font-normal text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 font-mono">
+                  Shift Date: {effectiveShiftDate}
                 </span>
               </h3>
 
