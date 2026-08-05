@@ -78,23 +78,45 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
       : 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto print:block">
+    <div
+      id="printable-modal-overlay"
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto print:block"
+    >
       {/* Print CSS Styles for Perfect Single-Page A4 Sizing and Complete UI Isolation */}
       <style>{`
         @media print {
-          /* Hide all page content by default during print */
-          body * {
+          @page {
+            size: A4 portrait;
+            margin: 3mm 3mm 3mm 3mm;
+          }
+
+          /* Ensure html and body are pure white with no margins */
+          html, body {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Hide all default page content during print */
+          body > * {
             visibility: hidden !important;
           }
 
-          /* Explicitly show only the printable report container and its children */
-          .printable-report-container,
-          .printable-report-container * {
+          /* Explicitly show only the printable modal overlay and its children */
+          #printable-modal-overlay,
+          #printable-modal-overlay * {
             visibility: visible !important;
           }
 
-          /* Pin the printable container to the top-left of the A4 page */
-          .printable-report-container {
+          /* Position printable container at top-left of A4 page with zero modal backdrop */
+          #printable-modal-overlay {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
@@ -105,33 +127,30 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             border: none !important;
             background: #ffffff !important;
             color: #0f172a !important;
-            border-radius: 0 !important;
+            display: block !important;
+            z-index: 999999 !important;
           }
 
-          @page {
-            size: A4 portrait;
-            margin: 4mm 4mm 4mm 4mm;
-          }
-
-          html, body {
-            background: #ffffff !important;
-            color: #0f172a !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            overflow: hidden !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          .print\\:hidden, .print\\:hidden * {
+          .print\\:hidden,
+          .print\\:hidden * {
             display: none !important;
             visibility: hidden !important;
           }
 
+          .printable-report-container {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-radius: 0 !important;
+          }
+
           .printable-document {
-            font-size: 8pt !important;
+            font-size: 7.5pt !important;
             line-height: 1.1 !important;
             color: #0f172a !important;
           }
@@ -139,23 +158,23 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           .printable-table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 7.2pt !important;
+            font-size: 7pt !important;
           }
 
           .printable-table th {
             background-color: #f1f5f9 !important;
             color: #0f172a !important;
-            font-size: 7pt !important;
+            font-size: 6.5pt !important;
             padding: 1.5px 3px !important;
-            border: 1px solid #cbd5e1 !important;
+            border: 1px solid #94a3b8 !important;
             text-transform: uppercase !important;
             line-height: 1 !important;
           }
 
           .printable-table td {
-            font-size: 7.2pt !important;
-            padding: 1px 3px !important;
-            border: 1px solid #e2e8f0 !important;
+            font-size: 7pt !important;
+            padding: 1px 2.5px !important;
+            border: 1px solid #cbd5e1 !important;
             line-height: 1.05 !important;
           }
 
