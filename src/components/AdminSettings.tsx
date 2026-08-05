@@ -594,10 +594,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
             <div>
               <h3 className="text-lg font-bold font-serif text-slate-900 dark:text-white flex items-center gap-2">
                 <QrCode className="w-5 h-5 text-amber-500" />
-                <span>Official Online Academy QR Code Check-In Station</span>
+                <span>Official Institution Wall Check-In QR Code</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Print or display this official QR poster for online academy check-in at Islamic Education Center.
+                Print and mount this official QR code on the wall at the institute entrance for teacher mobile check-in.
               </p>
             </div>
 
@@ -608,25 +608,28 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition-all"
             >
               <Printer className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Print Station QR Poster</span>
+              <span>Print Wall QR Poster</span>
             </button>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-around p-6 bg-slate-950 rounded-2xl border border-slate-800 text-center gap-6">
             <div className="p-3 bg-slate-900 rounded-2xl border border-amber-500/30 shadow-xl">
-              <QRCodeDisplay value="IEC-ONLINE-ACADEMY-CHECKIN-2026" size={200} />
+              <QRCodeDisplay
+                value={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}?wallQr=IEC-WALL-CHECKIN`}
+                size={200}
+              />
             </div>
 
             <div className="text-left space-y-2 max-w-sm text-white">
               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-800">
                 {instituteName}
               </span>
-              <h4 className="text-xl font-bold font-serif text-white">Online Academy Check-In Poster</h4>
+              <h4 className="text-xl font-bold font-serif text-white">Institute Wall QR Code</h4>
               <p className="text-xs text-slate-300">
-                Teachers open their Faculty Attendance Portal on their smartphone or PC, tap <strong>"Scan QR Code"</strong>, and scan this station code to log attendance instantly.
+                Teachers scan this QR code with their mobile phone camera or the in-app scanner at the institute entrance. They will be directed to enter their PIN to check in, verified by the campus GPS parameter.
               </p>
               <div className="pt-2 text-[11px] font-mono text-emerald-400">
-                QR Signature: IEC-ONLINE-ACADEMY-CHECKIN-2026
+                Wall QR Signature: IEC-WALL-CHECKIN
               </div>
             </div>
           </div>
